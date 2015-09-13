@@ -1,4 +1,4 @@
-#-------------------------------------------------------------------------------
+v#-------------------------------------------------------------------------------
 #
 # Copied from Itertools in Python 2.6 alpha, with modifications.
 #
@@ -32,7 +32,7 @@ def tail(n, iterable):
     """
     Returns an iterator over the last n items
     """
-    tail(3, 'ABCDEFG') --> E F G
+    # tail(3, 'ABCDEFG') --> E F G
     return iter(collections.deque(iterable, maxlen=n))
 
 
