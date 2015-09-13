@@ -12,6 +12,8 @@ Includes [recipes in itertools
 docs](https://docs.python.org/3/library/itertools.html#itertools-recipes)
 """
 
+from  itertools import *
+
 #-------------------------------------------------------------------------------
 
 def take(n, iterable):
