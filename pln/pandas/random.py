@@ -6,6 +6,17 @@ import pandas as pd
 
 #-------------------------------------------------------------------------------
 
+def _ints(value, shape):
+    if callable(value):
+        # It's a random function.
+        return value(shape)
+    else:
+        # Assume it's a constant.
+        result = np.empty(shape, dtype=int)
+        result[:] = value
+        return result
+
+
 def normal(mu=0, sigma=1):
     return partial(np.random.normal, mu, sigma)
 
@@ -19,18 +30,23 @@ def uniform_int(lo, hi):
 
 
 def word(length, upper=False):
-    dtype = "U{}".format(length)
+    """
+    @param length
+      Fixed string length, or a random function to generate it.
+    """
+    letters = "abcdefghijklmnopqrstuvwxyz"
     if upper:
-        letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-    else:
-        letters = "abcdefghijklmnopqrstuvwxyz"
+        letters = letters.upper()
 
-    # FIXME: Accept random function for length.
     def gen(shape):
+        lengths = _ints(length, shape)
+        field_length = lengths.max()
+        dtype = "U{}".format(field_length)
+
         result = np.empty(shape, dtype=dtype)
         flat = result.ravel()
-        for i in range(len(flat)):
-            flat[i] = "".join( random.choice(letters) for _ in range(length) )
+        for i, l in enumerate(lengths):
+            flat[i] = "".join( random.choice(letters) for _ in range(l) )
         return result
 
     return gen
