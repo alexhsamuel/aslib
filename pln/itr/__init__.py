@@ -10,6 +10,16 @@ from   .recipes import *  # also imports * from itertools
 
 #-------------------------------------------------------------------------------
 
+def ntimes(value, times):
+    """
+    Generates `times` copies of `value`.
+    """
+    for _ in range(times):
+        yield value
+
+
+#-------------------------------------------------------------------------------
+
 class PeekIter:
     """
     Iterator wrapper that supports arbitrary push back and peek ahead.
