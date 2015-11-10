@@ -96,20 +96,14 @@ def GRAY_LEVEL(fraction):
     return WHITE if index == 24 else 232 + index
 
 
-def style(*, color=None, background=None, light=False, bold=False, 
-          underline=False, blink=False, reverse=False, conceal=False):
+def sgr(*, color=None, background=None, light=False, bold=False, 
+        underline=False, blink=False, reverse=False, conceal=False):
     """
-    Returns a function that applies graphics style to text.
-
-    The styling function accepts a single string argument, and returns that
-    string styled and followed by a graphics reset.
+    Returns an SGR sequence.
     """
     codes = []
     if color is not None:
-        try:
-            codes.append(30 + _COLOR_NAMES[color])
-        except KeyError:
-            codes.extend([38, 5, int(color)])
+        codes.extend([38, 5, int(color)])
     if background is not None:
         try:
             codes.append(40 + _COLOR_NAMES[background])
@@ -127,8 +121,17 @@ def style(*, color=None, background=None, light=False, bold=False,
         codes.append(7)
     if conceal:
         codes.append(8)
+    return SGR(*codes)
 
-    escape = SGR(*codes)
+
+def style(**kw_args):
+    """
+    Returns a function that applies graphics style to text.
+
+    The styling function accepts a single string argument, and returns that
+    string styled and followed by a graphics reset.
+    """
+    escape = sgr(**kw_args)
     return lambda text: escape + str(text) + RESET
 
 
