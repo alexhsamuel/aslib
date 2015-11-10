@@ -1,9 +1,22 @@
+from   . import py
+from   .itr import chain
+
+
+NO_DEFAULT = object()
+
+def idem(obj):
+    return obj
+
 
 class Item:
 
-    def __init__(self, ctor=None, help=None):
+    def __init__(self, ctor=None, default=None, help=None):
         self.__ctor = ctor
         self.__help = help
+
+
+    def __repr__(self):
+        return py.format_ctor(self, self.__ctor, self.__help)
 
 
     @property
@@ -29,54 +42,135 @@ class Item:
 
 
 
+def _check_key(key):
+    if key.isidentifier():
+        return key
+    else:
+        raise ValueError("invalid key '{}'".format(key))
+
+
 class Group:
 
-    def __init__(self, **kw_args):
-        self.__items = {}
-        self.__defaults = {}
-        self.update(**kw_args)
+    def __init__(self, items):
+        self.__items = items
 
 
-    def __check_key(self, key):
-        if key.isidentifier():
-            return key
-        else:
-            raise ValueError("key '{}' not a valid identifier".format(key))
+    def __repr__(self):
+        return py.format_ctor(self, self.__items)
 
 
-    def __setattr__(self, key, item):
-        key = self.__check_key(key)
-        if isinstance(item, (Item, Group)):
-            self.__items[key] = item
-        elif callable(item):
-            self.__items[key] = Item(ctor=item)
-        else:
-            self.__items[key] = Item(ctor=type(item))
-            self.__defaults[key] = item
+    def __setitem__(self, key, item):
+        assert isinstance(item, (Item, Group))
+        self.__items[__check_key(key)] = item
+
+
+    def __getitem__(self, key):
+        key = _check_key(key)
+        try:
+            return self.__items[key]
+        except KeyError:
+            raise KeyError(key) from None
 
 
     def update(self, args={}, **kw_args):
         for key, item in args.items():
-            self.set(key, item)
+            self.__setitem__(key, item)
         for key, item in kw_args.items():
-            self.set(key, item)
+            self.__setitem__(key, item)
+
+
+
+class item:
+
+    def __init__(self, default=NO_DEFAULT, ctor=idem, help=None):
+        self.default = default
+        self.ctor = ctor
+        self.help = help
+
+
+
+def group(args={}, **kw_args):
+    items = {}
+    vals = {}
+    for name, var in chain(args.items(), kw_args.items()):
+        if isinstance(var, item):
+            items[name] = Item(ctor=var.ctor, help=var.help)
+            if var.default is not NO_DEFAULT:
+                vals[name] = var.default
+        elif isinstance(var, Cfg):
+            items[name] = Cfg(var._group, dict(var._vals))
+        elif callable(var):
+            items[name] = Item(ctor=var)
+        else:
+            items[name] = Item(ctor=type(var))
+            vals[name] = var
+    return Cfg(Group(items), vals)
 
 
 
 class Cfg:
 
-    def __init__(self, group):
-        self.__group = group
-        self.__values = dict( 
+    def __init__(self, group, vals={}):
+        object.__setattr__(self, "_Cfg__group", group)
+        object.__setattr__(self, "_Cfg__values", vals)
+
+
+    def __repr__(self):
+        return py.format_ctor(self, self.__group, self.__values)
+
+
+    @property
+    def _group(self):
+        return self.__group
+
+
+    @property
+    def _vals(self):
+        return self.__values
+
+
+    def __setattr__(self, name, value):
+        try:
+            item = self.__group[name]
+        except KeyError:
+            raise AttributeError(name) from None
+
+        if isinstance(item, Group):
+            try:
+                cfg = self.__values[name]
+            except KeyError:
+                cfg = self.__values[name] = Cfg(item)
+            cfg(value)
+
+        else:  
+            self.__values = item.convert(value)
+
+
+    def __getattr__(self, name):
+        try:
+            return self.__values[name]
+        except KeyError:
+            try:
+                self.__group[name]
+            except KeyError:
+                raise AttributeError("no config " + name) from None
+            else:
+                raise AttributeError("no value for config " + name) from None
+
+
+    def __call__(self, args={}, **kw_args):
+        for name, value in args.item():
+            self.__setattr__(name, value)
+        for name, value in kw_args.items():
+            self.__setattr__(name, value)
         
 
 
 
-
-DEFAULT_GROUP = Group(
-    bottom=Group(
+DEFAULT_CFG = group(
+    bottom=group(
         line                    ="-",
-        separator=Group(
+        separator=group(
             between             =" ",
             end                 ="",
             index               ="  ",
@@ -84,7 +178,7 @@ DEFAULT_GROUP = Group(
         ),
         show                    =False
     ),
-    float=Group(
+    float=group(
         inf                     ="\u221e",
         max_precision           =8,
         min_precision           =1,
@@ -93,7 +187,20 @@ DEFAULT_GROUP = Group(
 )
 
 
-UNICODE_BOX_CFG = DEFAULT_GROUP.cfg()
-UNICODE_BOX_CFG.bottom.line = "\u2500"
-UNICODE_BOX_CFG.separator.between = "\u2500\u2534\u2500"
+print(DEFAULT_CFG)
+
+
+c = DEFAULT_CFG
+c.bottom(
+    line                        = "\u2500",
+    separator = dict(
+        bottom                  = "\u2500\u2534\u2500",
+        end                     = "\u2500\u2518",
+        index                   = "\u2500\u2534\u2500",
+        start                   = "\u2514\u2500",
+    )
+)
+
+print(repr(c.bottom.separator))
+print(repr(c.bottom.separator.index))
 
