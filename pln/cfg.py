@@ -1,31 +1,51 @@
+"""
+Software configuration tool.
+"""
+
+# FIXME: Examples!
+
+#-------------------------------------------------------------------------------
+
 from   . import py
 from   .itr import chain
 
+#-------------------------------------------------------------------------------
 
-NO_DEFAULT = object()
+def _check_name(name):
+    if name.isidentifier():
+        return name
+    else:
+        raise ValueError("invalid name '{}'".format(name))
 
-def idem(obj):
-    return obj
 
+#-------------------------------------------------------------------------------
 
 class Var:
+    """
+    A configuration variable.
 
-    def __init__(self, ctor=idem, default=NO_DEFAULT, help=None):
-        self.__ctor = ctor
+    The variable has,
+    - A constructor or conversion function.
+    - Optionally, a default value.
+    - Optionally, a help string.
+    """
+
+    def __init__(self, convert=py.idem, default=py.NO_DEFAULT, help=None):
+        self.__convert = convert
         self.__default = default
         self.__help = help
 
 
     def __repr__(self):
-        kw_args = dict(ctor=self.__ctor, help=self.__help)
-        if self.__default is not NO_DEFAULT:
+        kw_args = dict(convert=self.__convert, help=self.__help)
+        if self.__default is not py.NO_DEFAULT:
             kw_args["default"] = self.__default
         return py.format_ctor(self, **kw_args)
 
 
     def __str__(self):
-        result = getattr(self.__ctor, "__name__", str(self.__ctor))
-        if self.__default is not NO_DEFAULT:
+        result = getattr(self.__convert, "__name__", str(self.__convert))
+        if self.__default is not py.NO_DEFAULT:
             result += " default={!r}".format(self.__default)
         if self.__help is not None:
             result += " : " + help
@@ -33,13 +53,13 @@ class Var:
 
 
     @property
-    def ctor(self):
-        return self.__ctor
+    def convert(self):
+        return self.__convert
 
 
     @property
     def default(self):
-        if self.__default is NO_DEFAULT:
+        if self.__default is py.NO_DEFAULT:
             raise LookupError("no default")
         else:
             return self.__default
@@ -51,18 +71,17 @@ class Var:
 
 
     def convert(self, value):
-        return value if self.__ctor is None else self.__ctor(value)
+        return value if self.__convert is None else self.__convert(value)
 
-
-
-def _check_name(name):
-    if name.isidentifier():
-        return name
-    else:
-        raise ValueError("invalid name '{}'".format(name))
 
 
 class Group:
+    """
+    A namespace of configuration variables, possibly nested.
+
+    Maps names, which must be Python identifiers, to configuration variables
+    or to other groups.
+    """
 
     def __init__(self, args={}, **kw_args):
         self.vars = {}
@@ -74,14 +93,22 @@ class Group:
 
 
     def __setitem__(self, name, value):
+        """
+        Adds or replaces a name.
+
+        If `value` is a `Group` or `Var`, it is set directly.  Otherwise, if 
+        `value` is callable, a new `Var` is used with `value` as the conversion
+        function.  Otherwise, a new `Var` is used with `value` as the default
+        and its type as the conversion function.
+        """
         name = _check_name(name)
 
         if isinstance(value, (Group, Var)):
             self.vars[name] = value
         elif callable(value):
-            self.vars[name] = Var(ctor=value)
+            self.vars[name] = Var(convert=value)
         else:
-            self.vars[name] = Var(ctor=type(value), default=value)
+            self.vars[name] = Var(convert=type(value), default=value)
 
 
     def __getitem__(self, name):
@@ -100,7 +127,15 @@ class Group:
 
 
 
+#-------------------------------------------------------------------------------
+
 class Cfg:
+    """
+    A configuration.
+
+    A configuration relates to a group, and contains value assignments to some
+    of the group's variables.
+    """
 
     def __init__(self, group, args={}):
         vals = {}
