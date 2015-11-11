@@ -1,4 +1,7 @@
+import inspect
+import shutil
 import sys
+import types
 
 # FIXME: __all__
 
@@ -98,3 +101,24 @@ def import_look_up(name):
         raise NameError(name)
     
 
+def dump_attrs(obj):
+    width = shutil.get_terminal_size().columns
+    for name in sorted(dir(obj)):
+        attr = getattr(obj, name)
+        if not isinstance(attr, types.MethodType):
+            line = "{:24s} = {}".format(name, repr(repr(attr))[1 : -1])
+            if len(line) > width:
+                line = line[: width - 1] + "\u2026"
+            print(line)
+
+
+def dump_methods(obj):
+    width = shutil.get_terminal_size().columns
+    for name in sorted(dir(obj)):
+        attr = getattr(obj, name)
+        if isinstance(attr, types.MethodType):
+            line = attr.__name__ + str(inspect.signature(attr)) 
+            if len(line) > width:
+                line = line[: width - 1] + "\u2026"
+            print(line)
+    
