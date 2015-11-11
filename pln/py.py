@@ -3,6 +3,18 @@ import sys
 # FIXME: __all__
 
 #-------------------------------------------------------------------------------
+# Tokens
+
+NO_DEFAULT = object()
+
+#-------------------------------------------------------------------------------
+
+def idem(obj):
+    """
+    Returns its argument.
+    """
+    return obj
+
 
 def tupleize(obj):
     if isinstance(obj, str):
