@@ -18,10 +18,8 @@ class Var:
 
     def __repr__(self):
         kw_args = dict(ctor=self.__ctor, help=self.__help)
-        try:
+        if self.__default is not NO_DEFAULT:
             kw_args["default"] = self.__default
-        except AttributeError:
-            pass
         return py.format_ctor(self, **kw_args)
 
 
@@ -41,10 +39,10 @@ class Var:
 
     @property
     def default(self):
-        try:
-            return self.__default
-        except AttributeError:
+        if self.__default is NO_DEFAULT:
             raise LookupError("no default")
+        else:
+            return self.__default
 
 
     @property
@@ -175,7 +173,11 @@ class Cfg:
             except KeyError:
                 raise AttributeError("no config " + name) from None
             else:
-                raise AttributeError("no value for config " + name) from None
+                try:
+                    return var.default
+                except AttributeError:
+                    raise AttributeError(
+                        "no value for config " + name) from None
 
 
     def __call__(self, args={}, **kw_args):
@@ -183,49 +185,50 @@ class Cfg:
             self.__setattr__(name, value)
         for name, value in kw_args.items():
             self.__setattr__(name, value)
+        return self
         
 
 
 
-DEFAULT_CFG = Group(
-    bottom=Group(
-        line                    ="-",
-        separator=Group(
-            between             =" ",
-            end                 ="",
-            index               ="  ",
-            start               ="",
-        ),
-        show                    =False
-    ),
-    float=Group(
-        inf                     ="\u221e",
-        max_precision           =8,
-        min_precision           =1,
-        nan                     ="NaN",
-    ),
-)
+# DEFAULT_CFG = Group(
+#     bottom=Group(
+#         line                    ="-",
+#         separator=Group(
+#             between             =" ",
+#             end                 ="",
+#             index               ="  ",
+#             start               ="",
+#         ),
+#         show                    =False
+#     ),
+#     float=Group(
+#         inf                     ="\u221e",
+#         max_precision           =8,
+#         min_precision           =1,
+#         nan                     ="NaN",
+#     ),
+# )
 
 
-print(DEFAULT_CFG)
-print()
-print(Cfg(DEFAULT_CFG))
-print()
+# print(DEFAULT_CFG)
+# print()
+# print(Cfg(DEFAULT_CFG))
+# print()
 
 
-c = Cfg(DEFAULT_CFG)
-c.bottom(
-    line                        = "\u2500",
-    separator = dict(
-        between                 = "\u2500\u2534\u2500",
-        end                     = "\u2500\u2518",
-        index                   = "\u2500\u2534\u2500",
-        start                   = "\u2514\u2500",
-    )
-)
-print(c)
-print()
+# c = Cfg(DEFAULT_CFG)
+# c.bottom(
+#     line                        = "\u2500",
+#     separator = dict(
+#         between                 = "\u2500\u2534\u2500",
+#         end                     = "\u2500\u2518",
+#         index                   = "\u2500\u2534\u2500",
+#         start                   = "\u2514\u2500",
+#     )
+# )
+# print(c)
+# print()
 
-print(repr(c.bottom.separator))
-print(repr(c.bottom.separator.index))
+# print(repr(c.bottom.separator))
+# print(repr(c.bottom.separator.index))
 
