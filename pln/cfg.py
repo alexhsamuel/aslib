@@ -186,49 +186,6 @@ class Cfg:
         for name, value in kw_args.items():
             self.__setattr__(name, value)
         return self
-        
 
 
-
-# DEFAULT_CFG = Group(
-#     bottom=Group(
-#         line                    ="-",
-#         separator=Group(
-#             between             =" ",
-#             end                 ="",
-#             index               ="  ",
-#             start               ="",
-#         ),
-#         show                    =False
-#     ),
-#     float=Group(
-#         inf                     ="\u221e",
-#         max_precision           =8,
-#         min_precision           =1,
-#         nan                     ="NaN",
-#     ),
-# )
-
-
-# print(DEFAULT_CFG)
-# print()
-# print(Cfg(DEFAULT_CFG))
-# print()
-
-
-# c = Cfg(DEFAULT_CFG)
-# c.bottom(
-#     line                        = "\u2500",
-#     separator = dict(
-#         between                 = "\u2500\u2534\u2500",
-#         end                     = "\u2500\u2518",
-#         index                   = "\u2500\u2534\u2500",
-#         start                   = "\u2514\u2500",
-#     )
-# )
-# print(c)
-# print()
-
-# print(repr(c.bottom.separator))
-# print(repr(c.bottom.separator.index))
 
