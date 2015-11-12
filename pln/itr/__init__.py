@@ -18,6 +18,17 @@ def ntimes(value, times):
         yield value
 
 
+def first(iterable):
+    """
+    Generates `(first, item)` for each item in `iterable`, where `first` is 
+    true for the first time and false for subsequent items.
+    """
+    i = iter(iterable)
+    yield True, next(i)
+    while True:
+        yield False, next(i)
+
+
 #-------------------------------------------------------------------------------
 
 class PeekIter:
