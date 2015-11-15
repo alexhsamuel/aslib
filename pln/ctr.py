@@ -7,6 +7,7 @@ A container is an object that supports `__contains__`.
 #-------------------------------------------------------------------------------
 
 import collections.abc
+import re
 
 __all__ = [
     "select",
@@ -97,6 +98,38 @@ class all_but:
 
     def __contains__(self, item):
         return item not in self.__container
+
+
+
+#-------------------------------------------------------------------------------
+
+class only:
+    """
+    Contains only a particular item.
+    """
+
+    def __init__(self, item):
+        self.__item = item
+
+
+    def __contains__(self, item):
+        return item == self.__item
+
+
+
+#-------------------------------------------------------------------------------
+
+class regex:
+    """
+    Contains an item iff. its `str` matches a regular expression.
+    """
+
+    def __init__(self, regex):
+        self.__regex = re.compile(regex)
+
+
+    def __contains__(self, item):
+        return self.__regex.match(str(item)) is not None
 
 
 
