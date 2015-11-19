@@ -29,6 +29,24 @@ def first(iterable):
         yield False, next(i)
 
 
+def last(iterable):
+    """
+    Generates `(last, item)` for each item in `iterable`, where `last` is 
+    false except for the last item.
+    """
+    i = iter(iterable)
+    item = next(i)
+    while True:
+        try:
+            next_item = next(i)
+        except StopIteration:
+            yield True, item
+            break
+        else:
+            yield False, item
+            item = next_item
+
+
 #-------------------------------------------------------------------------------
 
 class PeekIter:
