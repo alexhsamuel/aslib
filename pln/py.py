@@ -119,8 +119,8 @@ def dump_attrs(obj):
         if not isinstance(attr, METHOD_TYPES):
             is_getset = isinstance(
                 getattr(type(obj), name, None), types.GetSetDescriptorType)
-            line = "{:24s}{} {}".format(
-                name, "->" if is_getset else " =", repr(repr(attr))[1 : -1])
+            line = "{:24s} {} {}".format(
+                name, "\u2192" if is_getset else "=", repr(repr(attr))[1 : -1])
             if len(line) > width:
                 line = line[: width - 1] + "\u2026"
             print(line)
