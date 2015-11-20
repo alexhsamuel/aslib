@@ -6,6 +6,17 @@ import types
 # FIXME: __all__
 
 #-------------------------------------------------------------------------------
+
+# Inject some missing internal types into the 'types' module.
+types.MethodWrapperType = type("".__eq__)
+
+METHOD_TYPES = (
+    types.MethodType, 
+    types.MethodWrapperType, 
+    types.BuiltinMethodType,
+)
+
+#-------------------------------------------------------------------------------
 # Tokens
 
 NO_DEFAULT = object()
@@ -105,8 +116,11 @@ def dump_attrs(obj):
     width = shutil.get_terminal_size().columns
     for name in sorted(dir(obj)):
         attr = getattr(obj, name)
-        if not isinstance(attr, types.MethodType):
-            line = "{:24s} = {}".format(name, repr(repr(attr))[1 : -1])
+        if not isinstance(attr, METHOD_TYPES):
+            is_getset = isinstance(
+                getattr(type(obj), name, None), types.GetSetDescriptorType)
+            line = "{:24s}{} {}".format(
+                name, "->" if is_getset else " =", repr(repr(attr))[1 : -1])
             if len(line) > width:
                 line = line[: width - 1] + "\u2026"
             print(line)
