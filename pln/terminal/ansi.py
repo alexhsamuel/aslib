@@ -124,6 +124,29 @@ def sgr(*, color=None, background=None, light=False, bold=False,
     return SGR(*codes)
 
 
+def inverse_sgr(*, color=None, background=None, light=False, bold=False,
+                underline=False, blink=False, reverse=False, conceal=False):
+    """
+    Returns the inverse SGR sequence to `sgr()`.
+    """
+    codes = []
+    if color is not None:
+        codes.append(39)
+    if background is not None:
+        codes.append(49)
+    if bold or light:
+        codes.append(22)
+    if underline:
+        codes.append(24)
+    if blink:
+        codes.append(25)
+    if reverse:
+        codes.append(27)
+    if conceal:
+        codes.append(28)
+    return SGR(*codes)
+
+
 def style(**kw_args):
     """
     Returns a function that applies graphics style to text.
@@ -132,6 +155,7 @@ def style(**kw_args):
     string styled and followed by a graphics reset.
     """
     escape = sgr(**kw_args)
-    return lambda text: escape + str(text) + RESET
+    unescape = inverse_sgr(**kw_args)
+    return lambda text: escape + str(text) + unescape
 
 
