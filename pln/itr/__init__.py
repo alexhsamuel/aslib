@@ -49,6 +49,33 @@ def last(iterable):
 
 #-------------------------------------------------------------------------------
 
+# FIXME: Elsewhere
+
+def ensure_incl(obj):
+    if obj is None:
+        return (True, False)
+    if obj in (True, False):
+        return (obj, obj)
+    begin, end = obj
+    return bool(begin), bool(end)
+
+
+def range(start, end, step=1, *, incl=None):
+    """
+    Generates values starting at `start` that are less than `end`, incrementing
+    by `step` for each.
+    """
+    incl_start, incl_end = ensure_incl(incl)
+    val = start
+    if not incl_start:
+        val += step
+    while val < end or (incl_end and val == end):
+        yield val
+        val += step
+
+
+#-------------------------------------------------------------------------------
+
 class PeekIter:
     """
     Iterator wrapper that supports arbitrary push back and peek ahead.
