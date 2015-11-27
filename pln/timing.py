@@ -52,7 +52,7 @@ class timing:
     Context manager that measures wall clock time between entry and exit.
     """
 
-    def __init__(self, *, log=None):
+    def __init__(self):
         self.__start = self.__end = self.__elapsed = None
 
 
