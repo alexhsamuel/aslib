@@ -102,14 +102,16 @@ class timing_log(timing):
     Context manager that logs elapsed wall clock time on exit.
     """
 
-    def __init__(self, name="timer", print=print_err):
+    def __init__(self, name="timer", print=print_err, start=False):
         super().__init__()
         self.__name = name
         self.__print = print
+        self.__start = bool(start)
 
 
     def __enter__(self):
-        self.__print("{} starting".format(self.__name))
+        if self.__start:
+            self.__print("{} starting".format(self.__name))
         super().__enter__()
 
 
