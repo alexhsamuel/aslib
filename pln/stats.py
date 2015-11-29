@@ -14,7 +14,7 @@ class Stats(Stats):
 
     @property
     def mean_std(self):
-        precision = max(0, -round(math.log10(self.mean)) + 2)
+        precision = max(0, -math.floor(math.log10(self.mean)) + 2)
         return ("{{:.{0}f}} ± {{:.{0}f}}"
             .format(precision)
             .format(self.mean, self.std_dev)
