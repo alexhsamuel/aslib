@@ -124,3 +124,73 @@ class timing_log(timing):
 
 
 
+#-------------------------------------------------------------------------------
+
+MSEC = 1e-3
+USEC = 1e-6
+NSEC = 1e-6
+
+def _time(fn, count):
+    start = perf_counter()
+    for _ in range(count):
+        fn()
+    return (perf_counter() - start) / count
+
+
+def _estimate_time(fn, *, min_time=MSEC):
+    """
+    Estimates the time to invoke `fn()`.
+    """
+    # Number of iterations to time.  
+    count = 1
+    while True:
+        # Time 'count' iterations.
+        elapsed = _time(fn, count)
+        # Is the total time significant?
+        if elapsed > min_time:
+            return elapsed / count
+        else:
+            # No.  Try again with more iterations.
+            count *= 10
+
+
+def _time_it(fn, *, trials=10, count=None, target=1.0, warm_up=1):
+    """
+    Times callable `fn`.
+
+    @param trials
+      Number of trials.
+    @param count
+      Number of invocations per trial, or `None` to choose automatically
+      based on `target`.
+    @param target
+      Approximate total time in seconds for all trials, used to choose `count` 
+      automatically.
+    @param warm_up
+      Number of times to invoke `fn` as a warm-up before timing.
+    @return
+      Generator of trial times.  Each time is the total time for the trial
+      divided by the number of invocations per trial.
+    """
+    # Do some un-timed warm up calls.
+    for _ in range(warm_up):
+        fn()
+
+    if count is None:
+        time_estimate = _estimate_time(fn)
+        count = max(1, round(target / trials / time_estimate))
+
+    return ( _time(fn, count) for _ in range(trials) )
+
+    
+def time_it(fn, **kw_args):
+    """
+    Times callable `fn`.
+
+    @return
+      Summary statistics of timing trials.
+    """
+    from .stats import get_stats
+    return get_stats(_time_it(fn, **kw_args))
+
+
