@@ -279,6 +279,10 @@ class Parser(html.parser.HTMLParser):
 
     Unrecognized tags are passed through.
 
+    Usage::
+
+        print(Parser().feed(markup).result)
+
     """
 
     # Renaming tags to SGR attributes.
@@ -352,6 +356,11 @@ class Parser(html.parser.HTMLParser):
     def handle_data(self, data):
         # Just append non-tag text.
         self.__result.append(data)
+
+
+    def feed(self, *args, **kw_args):
+        super().feed(*args, **kw_args)
+        return self
 
 
     @property
