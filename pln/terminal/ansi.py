@@ -332,7 +332,9 @@ class Parser(html.parser.HTMLParser):
 
     def handle_endtag(self, tag):
         tag = self.__RENAME.get(tag, tag)
-        if len(self.__tags) == 0 or tag != self.__tags.pop():
+        if len(self.__tags) == 0:
+            raise ParseError("unmatched end tag {!r}".format(tag))
+        elif tag != self.__tags.pop():
             raise ParseError("mismatched end tag {!r}".format(tag))
 
         if tag in self.__colors:
