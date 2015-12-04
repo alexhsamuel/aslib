@@ -372,3 +372,13 @@ class Parser(html.parser.HTMLParser):
 
 
 
+def convert_markup(text):
+    """
+    Converts HTML-style markup into ANSI escape codes.
+
+    @see
+      `Parser` for markup syntex.
+    """
+    return Parser().feed(text).result
+
+
