@@ -105,6 +105,8 @@ def parse_rgb_triple(triple):
     if not triple.startswith("#"):
         raise ValueError("RGB triple doesn't start with #")
     if len(triple) == 4:
+        # Multiply single digits by 0x11 to repeat digits, e.g. #1a6 expands
+        # to #11aa66.
         return tuple( int(x, 16) * 17 for x in triple[1 : 4] )
     elif len(triple) == 7:
         rgb = triple[1 : 3], triple[3 : 5], triple[5 : 7]
