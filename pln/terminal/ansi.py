@@ -314,7 +314,7 @@ class Parser(html.parser.HTMLParser):
             color = get_color(attrs[0][1])
             stack = self.__colors[tag]
             # Set the color.
-            if len(stack) == 0 or stack[-1] != color:
+            if stack[-1] != color:
                 self.__result.append(sgr(**{tag: color}))
             # Push it.
             stack.append(color)
