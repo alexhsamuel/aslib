@@ -360,6 +360,7 @@ class Parser(html.parser.HTMLParser):
 
 
     def feed(self, *args, **kw_args):
+        # Just make this method chainable.
         super().feed(*args, **kw_args)
         return self
 
