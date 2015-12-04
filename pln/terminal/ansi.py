@@ -298,8 +298,8 @@ class Parser(html.parser.HTMLParser):
         self.__result = []
         # Stack of tags, for matching end tags.
         self.__tags = []
-        # For colors, stacks of nested values.
-        self.__colors = dict(fg=[], bg=[])
+        # For colors, stacks of nested values; "default" is a sentry value.
+        self.__colors = dict(fg=["default"], bg=["default"])
         # For boolean attributes, a nesting count.
         self.__attrs = dict(bold=0, underline=0, blink=0, reverse=0, conceal=0)
 
@@ -338,10 +338,9 @@ class Parser(html.parser.HTMLParser):
         if tag in self.__colors:
             stack = self.__colors[tag]
             color = stack.pop()
-            old_color = "default" if len(stack) == 0 else stack[-1]
             # Restore the previous color.
-            if old_color != color:
-                self.__result.append(sgr(**{tag: old_color}))
+            if stack[-1] != color:
+                self.__result.append(sgr(**{tag: stack[-1]}))
 
         elif tag in self.__attrs:
             self.__attrs[tag] -= 1
