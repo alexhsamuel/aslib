@@ -210,7 +210,8 @@ def sgr(*, fg=None, bg=None, bold=None, underline=None, blink=None,
         codes.extend((48, 5, get_color(bg)))
 
     if bold is not None:
-        codes.append(1 if bold else 21)
+        # FIXME: Might be 22 for OSX, 21 for Linux?
+        codes.append(1 if bold else 22)
     if underline is not None:
         codes.append(4 if underline else 24)
     if blink is not None:
@@ -223,27 +224,25 @@ def sgr(*, fg=None, bg=None, bold=None, underline=None, blink=None,
     return SGR(*codes)
 
 
-def inverse_sgr(*, fg=None, bg=None, bold=False, underline=False, blink=False,
-                reverse=False, conceal=False):
-    """
-    Returns the inverse SGR sequence to `sgr()`.
-    """
-    codes = []
+def inverse_sgr(*, fg=None, bg=None, bold=None, underline=None, blink=None,
+                reverse=None, conceal=None):
     if fg is not None:
-        codes.append(39)
+        fg = "default"
     if bg is not None:
-        codes.append(49)
-    if bold:
-        codes.append(21)
-    if underline:
-        codes.append(24)
-    if blink:
-        codes.append(25)
-    if reverse:
-        codes.append(27)
-    if conceal:
-        codes.append(28)
-    return SGR(*codes)
+        bg = "default"
+    if bold is not None:
+        bold = not bold
+    if underline is not None:
+        underline = not underline
+    if blink is not None:
+        blink = not blink
+    if reverse is not None:
+        reverse = not reverse
+    if conceal is not None:
+        conceal = not conceal
+    return sgr(
+        fg=fg, bg=bg, bold=bold, underline=underline, blink=blink,
+        reverse=reverse, conceal=conceal)
 
 
 def style(**kw_args):
@@ -257,6 +256,22 @@ def style(**kw_args):
     unescape = inverse_sgr(**kw_args)
     return lambda text: escape + str(text) + unescape
 
+
+# Single-style shortcuts.
+
+def fg(color):
+    return style(fg=color)
+
+
+def bg(color):
+    return style(bg=color)
+
+
+bold        = style(bold=True)
+underline   = style(underline=True)
+blink       = style(blink=True)
+reverse     = style(reverse=True)
+concel      = style(conceal=True)
 
 #-------------------------------------------------------------------------------
 
@@ -289,10 +304,10 @@ class Parser(html.parser.HTMLParser):
 
     # Renaming tags to SGR attributes.
     __RENAME = {
-        "b": "bold",
+        "b"         : "bold",
         "background": "bg",
         "foreground": "fg",
-        "u": "underline",
+        "u"         : "underline",
     }
 
     def __init__(self):
