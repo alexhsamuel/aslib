@@ -179,8 +179,6 @@ def sgr(*, fg=None, bg=None, bold=None, underline=None, blink=None,
     @param bg
       Background color name or number, or `"default"` for the implementation's
       default. 
-    @param intensity
-      `"bold"`, `"faint"`, or `"normal"`.
     @param underline
       True to enable single underlining; false to disable.
     @param blink
