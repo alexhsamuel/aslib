@@ -31,6 +31,32 @@ def idem(obj):
 
 
 def tupleize(obj):
+    """
+    Converts into or wraps in a tuple.
+
+    If `obj` is an iterable object other than a `str`, converts it to a `tuple`.
+
+      >>> tupleize((1, 2, 3))
+      (1, 2, 3)
+      >>> tupleize([1, 2, 3])
+      (1, 2, 3)
+      >>> tupleize(range(1, 4))
+      (1, 2, 3)
+
+    Otherwise, wraps `obj` in a one-element `tuple`.
+
+      >>> tupleize(42)
+      (42,)
+      >>> tupleize(None)
+      (None,)
+      >>> tupleize("Hello, world!")
+      ('Hello, world!',)
+
+    @type obj
+      Any.
+    @rtype
+      `tuple`.
+    """
     if isinstance(obj, str):
         return (obj, )
     else:
