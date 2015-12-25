@@ -219,7 +219,7 @@ def sgr(*, fg=None, bg=None, bold=None, underline=None, blink=None,
     if conceal is not None:
         codes.append(8 if conceal else 28)
 
-    return SGR(*codes)
+    return SGR(*codes) if len(codes) > 0 else ""
 
 
 def inverse_sgr(*, fg=None, bg=None, bold=None, underline=None, blink=None,
@@ -248,7 +248,7 @@ def style(**kw_args):
     Returns a function that applies graphics style to text.
 
     The styling function accepts a single string argument, and returns that
-    string styled and followed by a graphics reset.
+    string styled and followed by the inverse styling.
     """
     escape = sgr(**kw_args)
     unescape = inverse_sgr(**kw_args)
@@ -272,6 +272,47 @@ reverse     = style(reverse=True)
 concel      = style(conceal=True)
 
 #-------------------------------------------------------------------------------
+
+def dict_diff(dict0, dict1):
+    assert len(dict0) == len(dict1)
+    return { k: dict1[k] for k in dict0 if dict1[k] != dict0[k] }
+
+
+class StyleStack:
+
+    DEFAULT_STYLE = {
+        "fg"        : "default",
+        "bg"        : "default",
+        "bold"      : False,
+        "underline" : False,
+        "blink"     : False,
+        "reverse"   : False,
+        "conceal"   : False,
+    }
+
+
+    def __init__(self):
+        self.__stack = [self.DEFAULT_STYLE]
+
+
+    def push(self, **styles):
+        bad_keys = set(styles) - set(self.DEFAULT_STYLE)
+        if len(bad_keys) > 0:
+            raise TypeError("unknown styles: " + ", ".join(bad_keys))
+
+        old = self.__stack[-1]
+        new = old.copy()
+        new.update(styles)
+        self.__stack.append(new)
+        return sgr(**dict_diff(old, new))
+
+
+    def pop(self):
+        old = self.__stack.pop()
+        new = self.__stack[-1]
+        return sgr(**dict_diff(old, new))
+                
+
 
 class Parser(html.parser.HTMLParser):
     """
