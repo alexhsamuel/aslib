@@ -8,7 +8,9 @@ from   . import py
 #-------------------------------------------------------------------------------
 
 # FIXME: Do better.
-logging.basicConfig(format="[%(levelname)-7s] %(message)s")
+logging.basicConfig(
+    format="%(asctime)s.%(msecs)03d [%(levelname)-7s] %(message)s",
+    datefmt="%H:%M:%S")
 
 #-------------------------------------------------------------------------------
 
