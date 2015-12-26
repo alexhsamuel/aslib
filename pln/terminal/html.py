@@ -108,13 +108,14 @@ class Converter(html.parser.HTMLParser):
         for word in words:
             length = len(word)
             if self.__col is None or self.__col + 1 + length > self.__width:
+                self << self.__style.push(**self.__style.DEFAULT_STYLE)
                 if self.__col is not None:
                     self << "\n"
                 indent = self.__indent[-1]
-                # FIXME: Disable style while printing indent.
                 self << indent
                 self.__col = len(indent)
                 self.__sep = False
+                self << self.__style.pop()
             if re.match(r"\s+$", word):  # FIXME
                 if self.__sep:
                     self << " "
