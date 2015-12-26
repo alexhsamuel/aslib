@@ -20,14 +20,15 @@ class Converter(html.parser.HTMLParser):
     # (prefix, suffix, style, newline)
     ELEMENTS = {
         "b"     : ("", "", {"bold": True}, False),
-        "code"  : ("", "", {"fg": "#073"}, False),
+        "code"  : ("", "", {"fg": "#254"}, False),
         "em"    : ("", "", {"underline": True}, False),
-        "h2"    : ("\n\n", "\n", {"underline": True}, True),
+        "h2"    : ("\n", "\n", {"underline": True}, True),
         "p"     : ("\n\n", "", {}, True),
         "u"     : ("", "", {"underline": True}, False),
     }
 
 
+    # FIXME: Suffix?  Or remove prefix?
     def __init__(self, width=None, indent=""):
         super().__init__()
 
@@ -35,15 +36,17 @@ class Converter(html.parser.HTMLParser):
             width = shutil.get_terminal_size().columns
 
         self.__width = width
-        self.__col = None
 
+        # The current column, or `None` if just starting a new line.
+        self.__col = None
+        # Needs a space.
+        self.__sep = False
         # Stack of indentation prefixes; last element is the top.
         self.__indent = [indent]
-
-        # Stack of ANSI terminal style.
+        # Stack of ANSI terminal styles.
         self.__style = ansi.StyleStack()
-
-        self.__result = []
+        # Lines of converted output.
+        self.__lines = []
 
 
     @property
@@ -60,13 +63,16 @@ class Converter(html.parser.HTMLParser):
 
 
     def __lshift__(self, string):
-        if string:
-            self.__result.append(string)
+        first, *rest = string.split("\n")
+        if first:
+            self.__lines[-1] += first
+        if rest:
+            self.__lines.extend(rest)
 
 
     @property
     def result(self):
-        return "".join(self.__result)
+        return "\n".join(self.__lines) + "\n"
 
 
     @log_call
@@ -98,19 +104,25 @@ class Converter(html.parser.HTMLParser):
     @log_call
     def handle_data(self, data):
         assert isinstance(data, str)
-        words = [ w for w in re.split(r"\s+", data) if len(w) > 0 ]
+        words = re.split(r"(\s+)", data)
         for word in words:
             length = len(word)
             if self.__col is None or self.__col + 1 + length > self.__width:
                 if self.__col is not None:
                     self << "\n"
                 indent = self.__indent[-1]
+                # FIXME: Disable style while printing indent.
                 self << indent
                 self.__col = len(indent)
-            else:
-                self << " "
-            self << word
-            self.__col += length + 1
+                self.__sep = False
+            if re.match(r"\s+$", word):  # FIXME
+                if self.__sep:
+                    self << " "
+                    self.__sep = False
+            elif length > 0:
+                self << word
+                self.__col += length + 1
+                self.__sep = True
 
 
     @log_call
@@ -127,7 +139,7 @@ if __name__ == "__main__":
     with open("tmp/test0.html") as file:
         html = file.read()
 
-    converter = Converter()
+    converter = Converter(indent="-- ")
     converter.feed(html)
     print(converter.result)
 
