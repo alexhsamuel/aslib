@@ -7,8 +7,7 @@ from   . import ansi
 from   ..text import get_common_indent
 import pln.log
 
-log = logging.getLogger(__name__)
-log.setLevel(logging.INFO)
+log = pln.log.get()
 log_call = pln.log.log_call(log.info)
 
 #-------------------------------------------------------------------------------
@@ -23,7 +22,7 @@ class Converter(html.parser.HTMLParser):
     # (indent, prefix, suffix, style, newline)
     ELEMENTS = {
         "b"     : (None, "", "", {"bold": True}, False),
-        "code"  : (None, "", "", {"fg": "#254"}, False),
+        "code"  : (None, "", "", {"fg": "#243"}, False),
         "em"    : (None, "", "", {"underline": True}, False),
         "h1"    : (None, "\n", "\n", {"bold": True, "underline": True}, True),
         "h2"    : ("\u2605 ", "\n", "\n", {"bold": True}, True),
@@ -207,6 +206,18 @@ class Converter(html.parser.HTMLParser):
 
 
 
+def convert(html, **kw_args):
+    """
+    Converts HTML to text with ANSI escape sequences.
+
+    @keywords
+      See `Converter.__init__()`.
+    """
+    converter = Converter(**kw_args)
+    converter.feed(html)
+    return converter.result
+
+
 #-------------------------------------------------------------------------------
 
 # FIXME: For testing.
@@ -214,9 +225,6 @@ class Converter(html.parser.HTMLParser):
 if __name__ == "__main__":
     with open("tmp/test0.html") as file:
         html = file.read()
-
-    converter = Converter(indent=" ")
-    converter.feed(html)
-    print(converter.result)
+    print(convert(html))
 
 
