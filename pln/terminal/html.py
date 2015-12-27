@@ -17,16 +17,16 @@ log_call = pln.log.log_call(log.info)
 
 class Converter(html.parser.HTMLParser):
 
-    # (prefix, suffix, style, newline)
+    # (indent, prefix, suffix, style, newline)
     ELEMENTS = {
-        "b"     : ("", "", {"bold": True}, False),
-        "code"  : ("", "", {"fg": "#254"}, False),
-        "em"    : ("", "", {"underline": True}, False),
-        "h1"    : ("\n", "\n", {"bold": True, "underline": True}, True),
-        "h2"    : ("\n", "\n", {"underline": True}, True),
-        "i"     : ("", "", {"fg": "#600"}, False),
-        "p"     : ("\n\n", "", {}, True),
-        "u"     : ("", "", {"underline": True}, False),
+        "b"     : (None, "", "", {"bold": True}, False),
+        "code"  : (None, "", "", {"fg": "#254"}, False),
+        "em"    : (None, "", "", {"underline": True}, False),
+        "h1"    : (None, "\n", "\n", {"bold": True, "underline": True}, True),
+        "h2"    : (None, "\n", "\n", {"underline": True}, True),
+        "i"     : (None, "", "", {"fg": "#600"}, False),
+        "p"     : (None, "\n\n", "", {}, True),
+        "u"     : (None, "", "", {"underline": True}, False),
     }
 
 
@@ -80,10 +80,12 @@ class Converter(html.parser.HTMLParser):
     @log_call
     def handle_starttag(self, tag, attrs):
         try:
-            prefix, _, style, newline = self.ELEMENTS[tag.lower()]
+            indent, prefix, _, style, newline = self.ELEMENTS[tag.lower()]
         except KeyError:
             log.warning("unknown tag: {}".format(tag))
         else:
+            if indent:
+                self.push_indent(indent)
             self << prefix
             if style:
                 self << self.__style.push(**style)
@@ -94,10 +96,12 @@ class Converter(html.parser.HTMLParser):
     @log_call
     def handle_endtag(self, tag):
         try:
-            _, suffix, style, _ = self.ELEMENTS[tag.lower()]
+            indent, _, suffix, style, _ = self.ELEMENTS[tag.lower()]
         except KeyError:
             pass
         else:
+            if indent:
+                self.pop_indent()
             if style:
                 self << self.__style.pop()
             self << suffix
