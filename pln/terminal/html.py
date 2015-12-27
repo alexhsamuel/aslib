@@ -121,10 +121,11 @@ class Converter(html.parser.HTMLParser):
             if re.match(r"\s+$", word):  # FIXME
                 if self.__sep:
                     self << " "
+                    self.__col += 1
                     self.__sep = False
             elif length > 0:
                 self << word
-                self.__col += length + 1
+                self.__col += length 
                 self.__sep = True
 
 
