@@ -27,7 +27,7 @@ class Converter(html.parser.HTMLParser):
         "h1"    : (None, "\n", "\n", {"bold": True, "underline": True}, True),
         "h2"    : (None, "\n", "\n", {"underline": True}, True),
         "i"     : (None, "", "", {"fg": "#600"}, False),
-        "p"     : (None, "\n\n", "", {}, True),
+        "p"     : (None, "", "\n", {}, True),
         "pre"   : ("\u2503 ", "", "", {"fg": "gray20"}, False),
         "u"     : (None, "", "", {"underline": True}, False),
     }
@@ -85,6 +85,12 @@ class Converter(html.parser.HTMLParser):
 
     @log_call
     def handle_starttag(self, tag, attrs):
+        # If needed, emit a word separator before emitting the word.
+        if self.__sep and self.__col is not None:
+            self << " "
+            self.__col += 1
+            self.__sep = False
+
         try:
             indent, prefix, _, style, newline = self.ELEMENTS[tag]
         except KeyError:
@@ -96,7 +102,9 @@ class Converter(html.parser.HTMLParser):
             if style:
                 self << self.__style.push(**style)
             if newline:
+                self << "\n"
                 self.__col = None
+                self.__sep = False
 
         if tag == "pre":
             self.__pre = True
@@ -151,6 +159,7 @@ class Converter(html.parser.HTMLParser):
                     # Emit the newline.
                     self << "\n"
                     self.__col = None
+                    self.__sep = False
 
                 if self.__col is None:
                     # Yes.  First, revert to the default style so we don't 
