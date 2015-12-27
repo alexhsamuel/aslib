@@ -273,12 +273,16 @@ concel      = style(conceal=True)
 
 #-------------------------------------------------------------------------------
 
+# FIXME: Elsewhere.
 def dict_diff(dict0, dict1):
     assert len(dict0) == len(dict1)
     return { k: dict1[k] for k in dict0 if dict1[k] != dict0[k] }
 
 
 class StyleStack:
+    """
+    Stack of nested styles.
+    """
 
     DEFAULT_STYLE = {
         "fg"        : "default",
@@ -291,11 +295,21 @@ class StyleStack:
     }
 
 
-    def __init__(self):
-        self.__stack = [self.DEFAULT_STYLE]
+    def __init__(self, style=DEFAULT_STYLE):
+        """
+        @param style
+          The initial style.
+        """
+        self.__stack = [style]
 
 
     def push(self, **styles):
+        """
+        Pushes a new style onto the stack.
+
+        @return
+          Escape codes to produce the new style.
+        """
         bad_keys = set(styles) - set(self.DEFAULT_STYLE)
         if len(bad_keys) > 0:
             raise TypeError("unknown styles: " + ", ".join(bad_keys))
@@ -308,11 +322,19 @@ class StyleStack:
 
 
     def pop(self):
+        """
+        Pops a style off the stack.
+
+        @return
+          Escape codes to revert to the previous style.
+        """
         old = self.__stack.pop()
         new = self.__stack[-1]
         return sgr(**dict_diff(old, new))
                 
 
+
+#-------------------------------------------------------------------------------
 
 class Parser(html.parser.HTMLParser):
     """
