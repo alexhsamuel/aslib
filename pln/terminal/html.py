@@ -30,7 +30,7 @@ class Converter(html.parser.HTMLParser):
         "h3"    : (None, "\n", "", {"underline": True}, True),
         "i"     : (None, "", "", {"fg": "#600"}, False),
         "p"     : (None, "", "\n", {}, True),
-        "pre"   : ("\u2503 ", "", "", {"fg": "gray20"}, False),
+        "pre"   : ("\u2503 ", "", "\n", {"fg": "gray20"}, False),
         "u"     : (None, "", "", {"underline": True}, False),
     }
 
