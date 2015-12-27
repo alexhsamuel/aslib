@@ -16,6 +16,7 @@ log_call = pln.log.log_call(log.info)
 # - Add UPPERCASE feature
 # - Track __col in __lshift__() using fixfmt.string_length().
 # - Elide / truncate words longer than width?
+# - French spacing.
 
 class Converter(html.parser.HTMLParser):
 
