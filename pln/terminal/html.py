@@ -53,7 +53,7 @@ class Converter(html.parser.HTMLParser):
 
     @property
     def indent(self):
-        return self.__indent(-1)
+        return self.__indent[-1]
 
 
     def push_indent(self, prefix):
@@ -106,27 +106,39 @@ class Converter(html.parser.HTMLParser):
     @log_call
     def handle_data(self, data):
         assert isinstance(data, str)
+        # Break into words at whitespace boundaries, keeping whitespace.
         words = re.split(r"(\s+)", data)
         for word in words:
             length = len(word)
-            if self.__col is None or self.__col + 1 + length > self.__width:
-                self << self.__style.push(**self.__style.DEFAULT_STYLE)
-                if self.__col is not None:
-                    self << "\n"
-                indent = self.__indent[-1]
-                self << indent
-                self.__col = len(indent)
-                self.__sep = False
-                self << self.__style.pop()
             if re.match(r"\s+$", word):  # FIXME
+                # This is whitespace.  Don't emit it, but flag that we've 
+                # seen it and requie a separation for the next word.
+                self.__sep = True
+            elif length > 0:
+                # Check if this word would take us past the terminal width.
+                if self.__col is None or self.__col + 1 + length > self.__width:
+                    # Yes.  First, revert to the default style so we don't 
+                    # carry underlines, reverse video, etc. over the newline.
+                    self << self.__style.push(**self.__style.DEFAULT_STYLE)
+                    # Emit the newline.
+                    if self.__col is not None:
+                        self << "\n"
+                    # Emit the current indentation.
+                    self << self.indent
+                    self.__col = len(self.indent)
+                    # Revert the current style.
+                    self << self.__style.pop()
+                    # No word separator required immediately after a newline.
+                    self.__sep = False
+
+                # If needed, emit a word separator before emitting the word.
                 if self.__sep:
                     self << " "
                     self.__col += 1
                     self.__sep = False
-            elif length > 0:
+
                 self << word
                 self.__col += length 
-                self.__sep = True
 
 
     @log_call
