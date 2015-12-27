@@ -16,6 +16,7 @@ log_call = pln.log.log_call(log.info)
 # FIXME: 
 # - Add UPPERCASE feature
 # - Track __col in __lshift__() using fixfmt.string_length().
+# - Elide / truncate words longer than width?
 
 class Converter(html.parser.HTMLParser):
 
@@ -25,7 +26,8 @@ class Converter(html.parser.HTMLParser):
         "code"  : (None, "", "", {"fg": "#254"}, False),
         "em"    : (None, "", "", {"underline": True}, False),
         "h1"    : (None, "\n", "\n", {"bold": True, "underline": True}, True),
-        "h2"    : (None, "\n", "\n", {"underline": True}, True),
+        "h2"    : ("\u2605 ", "\n", "\n", {"bold": True}, True),
+        "h3"    : (None, "\n", "", {"underline": True}, True),
         "i"     : (None, "", "", {"fg": "#600"}, False),
         "p"     : (None, "", "\n", {}, True),
         "pre"   : ("\u2503 ", "", "", {"fg": "gray20"}, False),
@@ -54,7 +56,7 @@ class Converter(html.parser.HTMLParser):
         # Stack of ANSI terminal styles.
         self.__style = ansi.StyleStack()
         # Lines of converted output.
-        self.__lines = []
+        self.__lines = [""]
 
 
     @property
@@ -98,19 +100,16 @@ class Converter(html.parser.HTMLParser):
         else:
             if indent:
                 self.push_indent(indent)
-            self << prefix
             if style:
                 self << self.__style.push(**style)
             if newline:
                 self << "\n"
                 self.__col = None
                 self.__sep = False
+            self << prefix
 
         if tag == "pre":
             self.__pre = True
-            self << "\n"
-            self << self.indent
-            self.__col = len(self.indent)
 
 
     @log_call
@@ -197,7 +196,7 @@ class Converter(html.parser.HTMLParser):
             text = "\n".join(lines)
 
         # Add the current indent to each line of text.
-        text = text.replace("\n", "\n" + self.indent)
+        text = self.indent + text.replace("\n", "\n" + self.indent)
 
         self << text
 
