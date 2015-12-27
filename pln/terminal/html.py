@@ -22,7 +22,9 @@ class Converter(html.parser.HTMLParser):
         "b"     : ("", "", {"bold": True}, False),
         "code"  : ("", "", {"fg": "#254"}, False),
         "em"    : ("", "", {"underline": True}, False),
+        "h1"    : ("\n", "\n", {"bold": True, "underline": True}, True),
         "h2"    : ("\n", "\n", {"underline": True}, True),
+        "i"     : ("", "", {"fg": "#600"}, False),
         "p"     : ("\n\n", "", {}, True),
         "u"     : ("", "", {"underline": True}, False),
     }
