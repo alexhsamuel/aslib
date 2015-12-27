@@ -102,7 +102,7 @@ class Converter(html.parser.HTMLParser):
                 self.push_indent(indent)
             if style:
                 self << self.__style.push(**style)
-            if newline:
+            if newline and self.__col is not None:
                 self << "\n"
                 self.__col = None
                 self.__sep = False
