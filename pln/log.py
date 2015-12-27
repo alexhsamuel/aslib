@@ -14,6 +14,25 @@ logging.basicConfig(
 
 #-------------------------------------------------------------------------------
 
+def get(name=None):
+    """
+    Returns the logger for `name`.
+
+    @param name
+      The logger name.  If `None`, uses the caller's global `__name__`.
+    """
+    if name is None:
+        frame = inspect.stack()[1][0]
+        try:
+            name = frame.f_globals["__name__"]
+        except KeyError:
+            logging.warning("caller has no __name__; using root logger")
+            name = None
+    return logging.getLogger(name)
+
+
+#-------------------------------------------------------------------------------
+
 def log_call(log=logging.debug, *, show_self=False):
     """
     Returns a decorator that logs calls to a method.
