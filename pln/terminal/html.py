@@ -1,13 +1,16 @@
 import html.parser
+import io
 import logging
 import re
 import shutil
 
 from   . import ansi
+from   .printer import Printer
 from   ..text import get_common_indent
 import pln.log
 
 log = pln.log.get()
+# FIXME: Remove log_calls.
 log_call = pln.log.log_call(log.info)
 
 #-------------------------------------------------------------------------------
@@ -36,61 +39,34 @@ class Converter(html.parser.HTMLParser):
 
 
     # FIXME: Suffix?  Or remove prefix?
-    def __init__(self, *, width=None, indent="", normalize_pre=True):
+    def __init__(self, printer, *, normalize_pre=True):
         super().__init__()
 
-        if width is None:
-            width = shutil.get_terminal_size().columns
-
-        self.__width = width
+        self.__printer = printer
         self.__normalize_pre = bool(normalize_pre)
 
-        # The current column, or `None` if just starting a new line.
-        self.__col = None
         # Needs a space.
         self.__sep = False
         # Are we in a <pre> element?
         self.__pre = False
-        # Stack of indentation prefixes; last element is the top.
-        self.__indent = [indent]
         # Stack of ANSI terminal styles.
         self.__style = ansi.StyleStack()
-        # Lines of converted output.
-        self.__lines = [""]
 
 
-    @property
-    def indent(self):
-        return self.__indent[-1]
-
-
-    def push_indent(self, indent):
-        self.__indent.append(self.__indent[-1] + indent)
-
-
-    def pop_indent(self):
-        self.__indent.pop()
-
-
-    def __lshift__(self, string):
-        first, *rest = string.split("\n")
-        if first:
-            self.__lines[-1] += first
-        if rest:
-            self.__lines.extend(rest)
-
-
-    @property
-    def result(self):
-        return "\n".join(self.__lines) + "\n"
+    # FIXME: Expose StyleStack instead of taking a style argument?
+    def convert(self, html, style={}):
+        self.__printer << self.__style.push(**style)
+        self.feed(html)
+        self.__printer << self.__style.pop()
 
 
     @log_call
     def handle_starttag(self, tag, attrs):
+        pr = self.__printer
+
         # If needed, emit a word separator before emitting the word.
-        if self.__sep and self.__col is not None:
-            self << " "
-            self.__col += 1
+        if self.__sep and not pr.at_start:
+            pr << " "
             self.__sep = False
 
         try:
@@ -99,31 +75,33 @@ class Converter(html.parser.HTMLParser):
             log.warning("unknown tag: {}".format(tag))
         else:
             if indent:
-                self.push_indent(indent)
+                pr.push_indent(indent)
             if style:
-                self << self.__style.push(**style)
-            if newline and self.__col is not None:
-                self << "\n"
-                self.__col = None
+                pr << self.__style.push(**style)
+            if newline and not pr.at_start:
+                pr.newline()
                 self.__sep = False
-            self << prefix
+            pr.write(prefix)
 
         if tag == "pre":
+            # Enable special handling for preformatted elements.
             self.__pre = True
 
 
     @log_call
     def handle_endtag(self, tag):
+        pr = self.__printer
+
         try:
             indent, _, suffix, style, _ = self.ELEMENTS[tag.lower()]
         except KeyError:
             pass
         else:
             if indent:
-                self.pop_indent()
+                pr.pop_indent()
             if style:
-                self << self.__style.pop()
-            self << suffix
+                pr << self.__style.pop()
+            pr.write(suffix)
 
         if tag == "pre":
             self.__pre = False
@@ -139,6 +117,8 @@ class Converter(html.parser.HTMLParser):
 
 
     def __handle_text(self, text):
+        pr = self.__printer
+
         # Break into words at whitespace boundaries, keeping whitespace.
         words = [ w for w in re.split(r"(\s+)", text) if len(w) > 0 ]
 
@@ -146,40 +126,28 @@ class Converter(html.parser.HTMLParser):
             length = len(word)
             if re.match(r"\s+$", word):  # FIXME
                 # This is whitespace.  Don't emit it, but flag that we've 
-                # seen it and requie a separation for the next word.
+                # seen it and require a separation for the next word.
                 self.__sep = True
 
             else:
                 # Check if this word would take us past the terminal width.
-                if (self.__col is not None 
-                    and (self.__col 
-                         + (1 if self.__sep else 0) 
-                         + length) > self.__width):
-                    # Emit the newline.
-                    self << "\n"
-                    self.__col = None
+                if (not pr.at_start
+                    and (pr.column + (1 if self.__sep else 0) + length) 
+                        > pr.width):
+                    # On to the next line.
+                    pr.newline()
                     self.__sep = False
 
-                if self.__col is None:
-                    # Yes.  First, revert to the default style so we don't 
-                    # carry underlines, reverse video, etc. over the newline.
-                    self << self.__style.push(**self.__style.DEFAULT_STYLE)
-                    # Emit the current indentation.
-                    self << self.indent
-                    self.__col = len(self.indent)
-                    # Revert the current style.
-                    self << self.__style.pop()
-                    # No word separator required immediately after a newline.
+                # Don't need a separator at the start of a line.
+                if pr.at_start:
                     self.__sep = False
 
                 # If needed, emit a word separator before emitting the word.
                 if self.__sep:
-                    self << " "
-                    self.__col += 1
+                    pr << " "
                     self.__sep = False
 
-                self << word
-                self.__col += length 
+                pr << word
 
 
     def __handle_pre_text(self, text):
@@ -195,10 +163,7 @@ class Converter(html.parser.HTMLParser):
             _, lines = get_common_indent(lines)
             text = "\n".join(lines)
 
-        # Add the current indent to each line of text.
-        text = self.indent + text.replace("\n", "\n" + self.indent)
-
-        self << text
+        self.__printer.write(text)
 
 
     @log_call
@@ -214,9 +179,10 @@ def convert(html, **kw_args):
     @keywords
       See `Converter.__init__()`.
     """
-    converter = Converter(**kw_args)
+    buffer = io.StringIO()
+    converter = Converter(Printer(buffer.write), **kw_args)
     converter.feed(html)
-    return converter.result
+    return buffer.getvalue()
 
 
 #-------------------------------------------------------------------------------

@@ -10,6 +10,7 @@ from   enum import Enum
 import html.parser
 from   html.parser import HTMLParseError as ParseError
 from   math import floor
+import re
 
 #-------------------------------------------------------------------------------
 
@@ -272,6 +273,13 @@ reverse     = style(reverse=True)
 concel      = style(conceal=True)
 
 #-------------------------------------------------------------------------------
+
+ESCAPE_REGEX = re.compile(re.escape(CSI) + r"[^@-~]*.")
+
+# FIXME: Use extension version from fixfmt.
+def length(string):
+    return len(ESCAPE_REGEX.sub("", string))
+
 
 # FIXME: Elsewhere.
 def dict_diff(dict0, dict1):
