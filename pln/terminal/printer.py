@@ -71,12 +71,14 @@ class Printer:
         assert "\n" not in string, repr(string)
 
         if self.__col is None:
-            self._write(self.__indent[-1])
-            self.__col = 0
-
-        self._write(string)
-        # FIXME: Don't count escapes.
-        self.__col += length(string)
+            if length(string) > 0:
+                self._write(self.__indent[-1] + string)
+                self.__col = length(string)
+            else:
+                self._write(string)
+        else:
+            self._write(string)
+            self.__col += length(string)
 
 
     def write(self, string):
