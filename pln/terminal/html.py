@@ -44,8 +44,10 @@ class Converter(html.parser.HTMLParser):
         "h1"    : ("", "\u272a ", 2, 1, {"bold": True, "underline": True}),
         "h2"    : ("", "\u2605 ", 2, 1, {"bold": True}),
         "h3"    : ("", "\u2734 ", 1, 1, {}),
+        "ol"    : ("  ", "", 1, 1, {}), 
         "p"     : ("", "", 2, 1, {}),
         "pre"   : ("\u2503 ", "", 1, 1, {"fg": "gray20"}),
+        "ul"    : ("  ", "", 1, 1, {}),
 
         # Inline elements
         "a"     : ("", "", 0, 0, {"fg": "#125"}),
@@ -53,6 +55,7 @@ class Converter(html.parser.HTMLParser):
         "code"  : ("", "", 0, 0, {"fg": "#243"}),
         "em"    : ("", "", 0, 0, {"underline": True}),
         "i"     : ("", "", 0, 0, {"fg": "#600"}),
+        "li"    : ("", "\u2219 ", 1, 1, {}),  # FIXME: Numbers for <ol>!
         "u"     : ("", "", 0, 0, {"underline": True}),
     }
 
