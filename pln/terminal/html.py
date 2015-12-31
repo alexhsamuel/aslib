@@ -22,8 +22,24 @@ log_call = pln.log.log_call(log.info)
 # - French spacing.
 
 class Converter(html.parser.HTMLParser):
+    """
+    Prints HTML to a fixed-width ANSI terminal.
 
-    # (indent, prefix, prenl, postnl, style, )
+    For each HTML element, style is given by a tuple,
+
+        `(indent, prefix, prenl, postnl, style)`
+
+    where,
+
+    - `indent` is text to append to the current indentation
+    - `prefix` is text to prepend to the next word
+    - `prenl` is amount of vertical space to precede the element; 0 for no
+      break; 1 for a line break, 2 for a line break and one blank line, etc.
+    - `postnl` is the amount of vertical space to follow the element; the 
+      amount used is the larger of this and the following `prenl`
+    - `style` is a style mapping for the element
+    """
+
     ELEMENTS = {
         # Block elements
         "h1"    : ("", "\u272a ", 3, 2, {"bold": True, "underline": True}),
@@ -134,7 +150,8 @@ class Converter(html.parser.HTMLParser):
                 self.__hspace = True
 
             else:
-                # Add vertical space if needed.
+                # Add vertical space if needed.  The first vspace ends the
+                # current line, so credit it if we're already at the start.
                 pr.newline(self.__vspace - (1 if pr.at_start else 0))
                 self.__vspace = 0
 
