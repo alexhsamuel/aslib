@@ -66,8 +66,10 @@ class Converter(html.parser.HTMLParser):
 
         # True if horizontal space is required before the next word.
         self.__hspace = False
-        # Number of lines of vertical space present.
+        # Number of lines of vertical space required before the next word.
         self.__vspace = 0
+        # Prefix for the next word.
+        self.__prefix = None
         # Are we in a <pre> element?
         self.__pre = False
         # Stack of ANSI terminal styles.
@@ -101,7 +103,7 @@ class Converter(html.parser.HTMLParser):
             if style:
                 pr << self.__style.push(**style)
             self.__vspace = max(self.__vspace, prenl)
-            pr.write(prefix)
+            self.__handle_text(prefix)
 
         if tag == "pre":
             # Enable special handling for preformatted elements.
