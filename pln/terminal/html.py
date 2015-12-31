@@ -48,6 +48,7 @@ class Converter(html.parser.HTMLParser):
         "pre"   : ("\u2503 ", "", 1, 1, {"fg": "gray20"}),
 
         # Inline elements
+        "a"     : ("", "", 0, 0, {"fg": "#125"}),
         "b"     : ("", "", 0, 0, {"bold": True}),
         "code"  : ("", "", 0, 0, {"fg": "#243"}),
         "em"    : ("", "", 0, 0, {"underline": True}),
