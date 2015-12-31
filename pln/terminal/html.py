@@ -84,13 +84,7 @@ class Converter(html.parser.HTMLParser):
                 pr.push_indent(indent)
             if style:
                 pr << self.__style.push(**style)
-
-            num_lines = prenl - (self.__vspace + (1 if pr.at_start else 0))
-            log.warning("start {} vspace={} adding {}".format(tag, self.__vspace, num_lines))
-            if num_lines > 0:
-                pr.newline(num_lines)
-                self.__vspace = prenl
-
+            self.__vspace = max(self.__vspace, prenl)
             pr.write(prefix)
 
         if tag == "pre":
@@ -111,12 +105,7 @@ class Converter(html.parser.HTMLParser):
                 pr.pop_indent()
             if style:
                 pr << self.__style.pop()
-
-            num_lines = postnl - (self.__vspace + (1 if pr.at_start else 0))
-            log.warning("end {} vspace={} adding {}".format(tag, self.__vspace, num_lines))
-            if num_lines > 0:
-                pr.newline(num_lines)
-                self.__vspace = postnl
+            self.__vspace = max(self.__vspace, postnl)
 
         if tag == "pre":
             self.__pre = False
@@ -145,6 +134,10 @@ class Converter(html.parser.HTMLParser):
                 self.__hspace = True
 
             else:
+                # Add vertical space if needed.
+                pr.newline(self.__vspace - (1 if pr.at_start else 0))
+                self.__vspace = 0
+
                 # Check if this word would take us past the terminal width.
                 if (not pr.at_start
                     and (pr.column + (1 if self.__hspace else 0) + length) 
@@ -163,7 +156,6 @@ class Converter(html.parser.HTMLParser):
                     self.__hspace = False
 
                 pr << word
-                self.__vspace = 0
 
 
     def __handle_pre_text(self, text):
