@@ -41,10 +41,10 @@ class Converter(html.parser.HTMLParser):
 
     ELEMENTS = {
         # Block elements
-        "h1"    : ("", "\u272a ", 2, 2, {"bold": True, "underline": True}),
-        "h2"    : ("", "\u2605 ", 1, 2, {"bold": True}),
-        "h3"    : ("", "\u2734 ", 1, 2, {}),
-        "p"     : ("", "", 1, 2, {}),
+        "h1"    : ("", "\u272a ", 2, 1, {"bold": True, "underline": True}),
+        "h2"    : ("", "\u2605 ", 2, 1, {"bold": True}),
+        "h3"    : ("", "\u2734 ", 1, 1, {}),
+        "p"     : ("", "", 2, 1, {}),
         "pre"   : ("\u2503 ", "", 1, 1, {"fg": "gray20"}),
 
         # Inline elements
