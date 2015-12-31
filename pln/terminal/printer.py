@@ -93,6 +93,8 @@ class Printer:
 
 
     def newline(self, count=1):
+        if count < 1:
+            return
         if self.at_start:
             self._write(self.__indent[-1])
         self._write("\n")

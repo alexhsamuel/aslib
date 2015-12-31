@@ -23,18 +23,21 @@ log_call = pln.log.log_call(log.info)
 
 class Converter(html.parser.HTMLParser):
 
-    # (indent, prefix, suffix, style, newline)
+    # (indent, prefix, prenl, postnl, style, )
     ELEMENTS = {
-        "b"     : (None, "", "", {"bold": True}, False),
-        "code"  : (None, "", "", {"fg": "#243"}, False),
-        "em"    : (None, "", "", {"underline": True}, False),
-        "h1"    : (None, "\n", "\n", {"bold": True, "underline": True}, True),
-        "h2"    : ("\u2605 ", "\n", "\n", {"bold": True}, True),
-        "h3"    : (None, "\n", "", {"underline": True}, True),
-        "i"     : (None, "", "", {"fg": "#600"}, False),
-        "p"     : (None, "", "\n", {}, True),
-        "pre"   : ("\u2503 ", "", "\n", {"fg": "gray20"}, False),
-        "u"     : (None, "", "", {"underline": True}, False),
+        # Block elements
+        "h1"    : ("", "\u272a ", 3, 2, {"bold": True, "underline": True}),
+        "h2"    : ("", "\u2605 ", 2, 2, {"bold": True}),
+        "h3"    : ("", "\u2734 ", 2, 2, {}),
+        "p"     : ("", "", 2, 2, {}),
+        "pre"   : ("\u2503 ", "", 2, 2, {"fg": "gray20"}),
+
+        # Inline elements
+        "b"     : ("", "", 0, 0, {"bold": True}),
+        "code"  : ("", "", 0, 0, {"fg": "#243"}),
+        "em"    : ("", "", 0, 0, {"underline": True}),
+        "i"     : ("", "", 0, 0, {"fg": "#600"}),
+        "u"     : ("", "", 0, 0, {"underline": True}),
     }
 
 
@@ -45,8 +48,10 @@ class Converter(html.parser.HTMLParser):
         self.__printer = printer
         self.__normalize_pre = bool(normalize_pre)
 
-        # Needs a space.
-        self.__sep = False
+        # True if horizontal space is required before the next word.
+        self.__hspace = False
+        # Number of lines of vertical space present.
+        self.__vspace = 0
         # Are we in a <pre> element?
         self.__pre = False
         # Stack of ANSI terminal styles.
@@ -54,6 +59,7 @@ class Converter(html.parser.HTMLParser):
 
 
     # FIXME: Expose StyleStack instead of taking a style argument?
+    # FIXME: Or move the StyleStack into the Printer?
     def convert(self, html, style={}):
         self.__printer << self.__style.push(**style)
         self.feed(html)
@@ -65,12 +71,12 @@ class Converter(html.parser.HTMLParser):
         pr = self.__printer
 
         # If needed, emit a word separator before emitting the word.
-        if self.__sep and not pr.at_start:
+        if self.__hspace and not pr.at_start:
             pr << " "
-            self.__sep = False
+            self.__hspace = False
 
         try:
-            indent, prefix, _, style, newline = self.ELEMENTS[tag]
+            indent, prefix, prenl, postnl, style = self.ELEMENTS[tag]
         except KeyError:
             log.warning("unknown tag: {}".format(tag))
         else:
@@ -78,9 +84,13 @@ class Converter(html.parser.HTMLParser):
                 pr.push_indent(indent)
             if style:
                 pr << self.__style.push(**style)
-            if newline and not pr.at_start:
-                pr.newline()
-                self.__sep = False
+
+            num_lines = prenl - (self.__vspace + (1 if pr.at_start else 0))
+            log.warning("start {} vspace={} adding {}".format(tag, self.__vspace, num_lines))
+            if num_lines > 0:
+                pr.newline(num_lines)
+                self.__vspace = prenl
+
             pr.write(prefix)
 
         if tag == "pre":
@@ -93,7 +103,7 @@ class Converter(html.parser.HTMLParser):
         pr = self.__printer
 
         try:
-            indent, _, suffix, style, _ = self.ELEMENTS[tag.lower()]
+            indent, prefix, prenl, postnl, style = self.ELEMENTS[tag]
         except KeyError:
             pass
         else:
@@ -101,7 +111,12 @@ class Converter(html.parser.HTMLParser):
                 pr.pop_indent()
             if style:
                 pr << self.__style.pop()
-            pr.write(suffix)
+
+            num_lines = postnl - (self.__vspace + (1 if pr.at_start else 0))
+            log.warning("end {} vspace={} adding {}".format(tag, self.__vspace, num_lines))
+            if num_lines > 0:
+                pr.newline(num_lines)
+                self.__vspace = postnl
 
         if tag == "pre":
             self.__pre = False
@@ -127,27 +142,28 @@ class Converter(html.parser.HTMLParser):
             if re.match(r"\s+$", word):  # FIXME
                 # This is whitespace.  Don't emit it, but flag that we've 
                 # seen it and require a separation for the next word.
-                self.__sep = True
+                self.__hspace = True
 
             else:
                 # Check if this word would take us past the terminal width.
                 if (not pr.at_start
-                    and (pr.column + (1 if self.__sep else 0) + length) 
+                    and (pr.column + (1 if self.__hspace else 0) + length) 
                         > pr.width):
                     # On to the next line.
                     pr.newline()
-                    self.__sep = False
+                    self.__hspace = False
 
                 # Don't need a separator at the start of a line.
                 if pr.at_start:
-                    self.__sep = False
+                    self.__hspace = False
 
                 # If needed, emit a word separator before emitting the word.
-                if self.__sep:
+                if self.__hspace:
                     pr << " "
-                    self.__sep = False
+                    self.__hspace = False
 
                 pr << word
+                self.__vspace = 0
 
 
     def __handle_pre_text(self, text):
