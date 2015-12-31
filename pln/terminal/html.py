@@ -35,18 +35,17 @@ class Converter(html.parser.HTMLParser):
     - `prefix` is text to prepend to the next word
     - `prenl` is amount of vertical space to precede the element; 0 for no
       break; 1 for a line break, 2 for a line break and one blank line, etc.
-    - `postnl` is the amount of vertical space to follow the element; the 
-      amount used is the larger of this and the following `prenl`
+    - `postnl` is the amount of vertical space to follow the element.
     - `style` is a style mapping for the element
     """
 
     ELEMENTS = {
         # Block elements
-        "h1"    : ("", "\u272a ", 3, 2, {"bold": True, "underline": True}),
-        "h2"    : ("", "\u2605 ", 2, 2, {"bold": True}),
-        "h3"    : ("", "\u2734 ", 2, 2, {}),
-        "p"     : ("", "", 2, 2, {}),
-        "pre"   : ("\u2503 ", "", 2, 2, {"fg": "gray20"}),
+        "h1"    : ("", "\u272a ", 2, 2, {"bold": True, "underline": True}),
+        "h2"    : ("", "\u2605 ", 1, 2, {"bold": True}),
+        "h3"    : ("", "\u2734 ", 1, 2, {}),
+        "p"     : ("", "", 1, 2, {}),
+        "pre"   : ("\u2503 ", "", 1, 1, {"fg": "gray20"}),
 
         # Inline elements
         "b"     : ("", "", 0, 0, {"bold": True}),
@@ -102,7 +101,7 @@ class Converter(html.parser.HTMLParser):
                 pr.push_indent(indent)
             if style:
                 pr << self.__style.push(**style)
-            self.__vspace = max(self.__vspace, prenl)
+            self.__vspace = prenl
             self.__handle_text(prefix)
 
         if tag == "pre":
@@ -123,7 +122,7 @@ class Converter(html.parser.HTMLParser):
                 pr.pop_indent()
             if style:
                 pr << self.__style.pop()
-            self.__vspace = max(self.__vspace, postnl)
+            pr.newline(postnl - (1 if pr.at_start else 0))
 
         if tag == "pre":
             self.__pre = False
