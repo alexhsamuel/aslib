@@ -202,7 +202,7 @@ class Converter(html.parser.HTMLParser):
 
 
 
-def convert(html, **kw_args):
+def convert(html, *, style={}, **kw_args):
     """
     Converts HTML to text with ANSI escape sequences.
 
@@ -210,8 +210,12 @@ def convert(html, **kw_args):
       See `Converter.__init__()`.
     """
     buffer = io.StringIO()
-    converter = Converter(Printer(buffer.write), **kw_args)
+    printer = Printer(buffer.write)
+    converter = Converter(printer, **kw_args)
+    # FIXME!!!
+    printer << converter._Converter__style.push(**style)
     converter.feed(html)
+    printer << converter._Converter__style.pop()
     return buffer.getvalue()
 
 
