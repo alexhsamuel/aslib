@@ -92,6 +92,20 @@ class Printer:
             self.write_string(string)
 
 
+    def right_justify(self, string):
+        """
+        Prints right-justified.
+
+        Prints `string` right justified on the current line, if it fits,
+        on the next line otherwise, followed in either case by a newline.
+        """
+        l = length(string)
+        if self.column + l > self.width:
+            self.newline()
+        self.write_string((self.width - (self.column + l)) * " " + string)
+        self.newline()
+
+
     def newline(self, count=1):
         if count < 1:
             return
