@@ -70,7 +70,7 @@ class Printer:
         self.write_string(self.__style.pop())
 
 
-    def write_string(self, string):
+    def write_string(self, string, *, style={}):
         """
         Prints a string on the current line.
 
@@ -80,18 +80,33 @@ class Printer:
             return
         assert "\n" not in string, repr(string)
 
+        if style:
+            self.push_style(**style)
         if self.__col is None:
             if length(string) > 0:
-                self._write(self.__indent[-1] + string)
+                # FIXME: Hacky.  What's the style policy for indentation?
+                self.push_style(**StyleStack.DEFAULT_STYLE)
+                self._write(self.__indent[-1])
+                self.pop_style()
+                self._write(string)
                 self.__col = length(string)
             else:
                 self._write(string)
         else:
             self._write(string)
             self.__col += length(string)
+        if style:
+            self.pop_style()
 
 
-    def write(self, string):
+    def write_line(self, string, *, style={}):
+        self.write_string(string, style=style)
+        self.newline()
+
+
+    def write(self, string, *, style={}):
+        if style:
+            self.push_style(**style)
         if "\n" in string:
             lines = string.split("\n")
             for line in lines[: -1]:
@@ -100,6 +115,8 @@ class Printer:
             self.write_string(lines[-1])
         else:
             self.write_string(string)
+        if style:
+            self.pop_style()
 
 
     def fits(self, string):
