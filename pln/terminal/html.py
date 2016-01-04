@@ -75,16 +75,14 @@ class Converter(html.parser.HTMLParser):
         self.__prefix = None
         # Are we in a <pre> element?
         self.__pre = False
-        # Stack of ANSI terminal styles.
-        self.__style = ansi.StyleStack()
 
 
-    # FIXME: Expose StyleStack instead of taking a style argument?
-    # FIXME: Or move the StyleStack into the Printer?
     def convert(self, html, style={}):
-        self.__printer << self.__style.push(**style)
+        if style:
+            self.__printer.push_style(**style)
         self.feed(html)
-        self.__printer << self.__style.pop()
+        if style:
+            self.__printer.pop_style()
 
 
     @log_call
@@ -104,7 +102,7 @@ class Converter(html.parser.HTMLParser):
             if indent:
                 pr.push_indent(indent)
             if style:
-                pr << self.__style.push(**style)
+                pr.push_style(**style)
             self.__vspace = prenl
             self.__handle_text(prefix)
 
@@ -125,7 +123,7 @@ class Converter(html.parser.HTMLParser):
             if indent:
                 pr.pop_indent()
             if style:
-                pr << self.__style.pop()
+                pr.pop_style()
             pr.newline(postnl - (1 if pr.at_start else 0))
 
         if tag == "pre":
@@ -212,10 +210,11 @@ def convert(html, *, style={}, **kw_args):
     buffer = io.StringIO()
     printer = Printer(buffer.write)
     converter = Converter(printer, **kw_args)
-    # FIXME!!!
-    printer << converter._Converter__style.push(**style)
+    if style:
+        printer.push_style(**style)
     converter.feed(html)
-    printer << converter._Converter__style.pop()
+    if style:
+        printer.pop_style()
     return buffer.getvalue()
 
 

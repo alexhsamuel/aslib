@@ -1,7 +1,7 @@
 import sys
 
 from   . import get_width
-from   .ansi import length
+from   .ansi import length, StyleStack
 
 #-------------------------------------------------------------------------------
 
@@ -10,7 +10,8 @@ class Printer:
     Does some bookkeeping for printing to a fixed-width device.
     """
 
-    def __init__(self, write=None, *, width=None, indent=""):
+    def __init__(self, write=None, *, width=None, indent="", 
+                 style=StyleStack.DEFAULT_STYLE):
         if write is None:
             write = sys.stdout.write
         if width is None:
@@ -18,6 +19,7 @@ class Printer:
         self.__width = width
         self.__indent = [indent]
         self.__col = None
+        self.__style = StyleStack(style)
         self._write = write
 
 
@@ -60,6 +62,14 @@ class Printer:
         self.__indent.pop()
 
 
+    def push_style(self, **style):
+        self.write_string(self.__style.push(**style))
+
+
+    def pop_style(self):
+        self.write_string(self.__style.pop())
+
+
     def write_string(self, string):
         """
         Prints a string on the current line.
@@ -90,6 +100,13 @@ class Printer:
             self.write_string(lines[-1])
         else:
             self.write_string(string)
+
+
+    def fits(self, string):
+        """
+        Returns true if `string` fits on the current line.
+        """
+        return self.column + length(string) <= self.width
 
 
     def right_justify(self, string):
