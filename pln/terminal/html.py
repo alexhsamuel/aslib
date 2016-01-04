@@ -3,6 +3,7 @@ import io
 import logging
 import re
 import shutil
+import sys
 
 from   . import ansi
 from   .printer import Printer
@@ -52,7 +53,7 @@ class Converter(html.parser.HTMLParser):
         # Inline elements
         "a"     : ("", "", 0, 0, {"fg": "#125"}),
         "b"     : ("", "", 0, 0, {"bold": True}),
-        "code"  : ("", "", 0, 0, {"fg": "#243"}),
+        "code"  : ("", "", 0, 0, {"bold": True}),
         "em"    : ("", "", 0, 0, {"underline": True}),
         "i"     : ("", "", 0, 0, {"fg": "#600"}),
         "li"    : ("", "\u2219 ", 1, 1, {}),  # FIXME: Numbers for <ol>!
@@ -200,7 +201,10 @@ class Converter(html.parser.HTMLParser):
 
 
 
-def convert(html, *, style={}, **kw_args):
+# FIXME: The width thing is hacky.  This method should only understand inline
+# elements, not block elements, and not do any line splitting.
+
+def convert(html, *, style={}, width=sys.maxsize, **kw_args):
     """
     Converts HTML to text with ANSI escape sequences.
 
@@ -208,7 +212,7 @@ def convert(html, *, style={}, **kw_args):
       See `Converter.__init__()`.
     """
     buffer = io.StringIO()
-    printer = Printer(buffer.write)
+    printer = Printer(buffer.write, width=width)
     converter = Converter(printer, **kw_args)
     if style:
         printer.push_style(**style)
