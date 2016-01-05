@@ -47,7 +47,7 @@ class Printer:
     @property
     def at_start(self):
         """
-        Trye if printing is at the start of a new line.
+        True if printing is at the start of a new line.
         """
         return self.__col is None
 
