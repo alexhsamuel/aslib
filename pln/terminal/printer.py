@@ -5,8 +5,18 @@ from   .ansi import length, StyleStack
 
 #-------------------------------------------------------------------------------
 
-# FIXME: Method names are terrible.  Fix them.
 # FIXME: Docstrings.
+
+# FIXME: API is terrible.  Fix it.  Maybe something like this?
+#
+#   >>> printer(fg="green") << "text"
+#   >>> printer(style_dict) <= "line"
+#   >>> printer(indent="... ") <= "line"
+#   >>> printer(style=...).html("<p>Blah blah.</p>")
+#   >>> printer.nl()
+#   >>> printer.start()  # nl if not at_start
+#   >>> printer.indent(...)
+#   >>> printer.unindent(...)
 
 class Printer:
     """
@@ -129,7 +139,17 @@ class Printer:
         return self.column + length(string) <= self.width
 
 
-    def right_justify(self, string):
+    def elide(self, string, *, style={}, ellipsis="\u2026"):
+        """
+        Prints `string`, elided at the end if it doesn't fit the current line.
+        """
+        space = self.width - self.column
+        if length(string) > space:
+            string = string[: space - length(ellipsis)] + ellipsis
+        self.write_line(string, style=style)
+
+
+    def right_justify(self, string, style={}):
         """
         Prints right-justified.
 
@@ -139,7 +159,9 @@ class Printer:
         l = length(string)
         if self.column + l > self.width:
             self.newline()
-        self.write_string((self.width - (self.column + l)) * " " + string)
+        self.write_string(
+            (self.width - (self.column + l)) * " " + string,
+            style=style)
         self.newline()
 
 
