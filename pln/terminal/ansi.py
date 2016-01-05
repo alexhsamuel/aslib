@@ -478,14 +478,17 @@ def convert_markup(text):
 #-------------------------------------------------------------------------------
 # For testing purposes.
 
-def print_colors():
-    print(underline("BASIC COLORS"))
+def print_colors(print=print):
+    """
+    Prints color samples.
+    """
+    print(underline("Basic Colors"))
     for color in range(16):
         print(
             "    {:2x} ".format(color) + fg(color)("TEST") + "  ", 
             end="\n" if color % 6 == 5 else "")
     print()
-    print(underline("RGB COLORS"))
+    print(underline("RGB Colors"))
     for r in range(6):
         for g in range(6):
             for b in range(6):
@@ -493,7 +496,7 @@ def print_colors():
                 print("{}{}{} {:2x} ".format(r, g, b, color)
                     + fg(color)("TEST") + "  ", 
                     end="\n" if color % 6 == 3 else "")
-    print(underline("GRAY SCALE"))
+    print(underline("Gray Scale"))
     for i in range(0, 101, 4):
         color = get_color("gray{}".format(i))
         name = "g{:02d}".format(i) if i < 100 else "   "
