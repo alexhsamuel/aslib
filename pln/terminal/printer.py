@@ -5,6 +5,9 @@ from   .ansi import length, StyleStack
 
 #-------------------------------------------------------------------------------
 
+# FIXME: Method names are terrible.  Fix them.
+# FIXME: Docstrings.
+
 class Printer:
     """
     Does some bookkeeping for printing to a fixed-width device.
