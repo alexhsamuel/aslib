@@ -83,7 +83,7 @@ def COLORMAP_BACKGROUND(i):
 #-------------------------------------------------------------------------------
 
 COLOR_NAMES = dict(
-    black       =232,
+    black       =  0,
     dark_red    =  1,
     dark_green  =  2,
     brown       =  3,
@@ -98,7 +98,7 @@ COLOR_NAMES = dict(
     blue        = 12,
     pink        = 13,
     cyan        = 14,
-    white       =255,
+    white       =231,
 )
 
 
@@ -147,7 +147,14 @@ def get_color(value):
             pass
         else:
             if 0 <= gray_value <= 100:
-                return 232 + gray_value * 24 // 101
+                # Use black (0), white (231), and 24 additional gray values in
+                # the range 232-255.
+                gray_value = gray_value * 26 // 101
+                return (
+                    0 if gray_value == 0 
+                    else 231 if gray_value == 25 
+                    else 231 + gray_value
+                )
 
     try:
         return COLOR_NAMES[val]
@@ -468,3 +475,28 @@ def convert_markup(text):
     return Parser().feed(text).result
 
 
+#-------------------------------------------------------------------------------
+# For testing purposes.
+
+def print_colors():
+    print(underline("BASIC COLORS"))
+    for color in range(16):
+        print(
+            "    {:2x} ".format(color) + fg(color)("TEST") + "  ", 
+            end="\n" if color % 6 == 5 else "")
+    print()
+    print(underline("RGB COLORS"))
+    for r in range(6):
+        for g in range(6):
+            for b in range(6):
+                color = 16 + 36 * r + 6 * g + b
+                print("{}{}{} {:2x} ".format(r, g, b, color)
+                    + fg(color)("TEST") + "  ", 
+                    end="\n" if color % 6 == 3 else "")
+    print(underline("GRAY SCALE"))
+    for i in range(0, 101, 4):
+        color = get_color("gray{}".format(i))
+        name = "g{:02d}".format(i) if i < 100 else "   "
+        print("{} {:2x} ".format(name, color) + fg(color)("TEST") + "  ", 
+            end="\n" if i % 24 == 20 else "")
+    print()
