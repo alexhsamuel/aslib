@@ -9,8 +9,6 @@ from   .ansi import length, StyleStack
 
 NL = "\n"
 
-# FIXME: Docstrings.
-
 class Printer:
     """
     Manages formatted printing to a fixed-width ANSI terminal.
