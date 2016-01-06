@@ -13,7 +13,23 @@ NL = "\n"
 
 class Printer:
     """
-    Does some bookkeeping for printing to a fixed-width device.
+    Manages formatted printing to a fixed-width ANSI terminal.
+
+    - Tracks the current column position relative to the (fixed) width.  Use
+      `column`, `remaining`, and `fits()`.
+
+    - Manages indentation.  Keeps a stack of indentation, each a suffix if the
+      previous.  Use `indent()` and `unindent()` to push and pop.
+
+    - Manages style with a stack of nested styles, per `ansi.style()`.  Use
+      `style()` and `unstyle()` to push and pop.
+
+    - Can write strings right-justified (`write_right()`) or elided (`elide()`).
+
+    - Provides syntactic sugar.
+
+    - Provides a context manager for styles and indents, with `__call__()`.
+
     """
 
     def __init__(self, write=None, *, width=None, indent="", 
@@ -22,9 +38,10 @@ class Printer:
             write = sys.stdout.write
         if width is None:
             width = get_width()
+
         self.__width = width
-        self.__indent = [indent]
         self.__col = None
+        self.__indent = [indent]
         self.__style = StyleStack(style)
         self._write = write
 
@@ -61,6 +78,13 @@ class Printer:
         True if printing is at the start of a new line.
         """
         return self.__col is None
+
+
+    def fits(self, string):
+        """
+        Returns true if `string` fits on the current line.
+        """
+        return self.column + length(string) <= self.width
 
 
     def newline(self, count=1):
@@ -139,13 +163,6 @@ class Printer:
             self._start_line()
             self._write(last)
             self.__col += length(last)
-
-
-    def fits(self, string):
-        """
-        Returns true if `string` fits on the current line.
-        """
-        return self.column + length(string) <= self.width
 
 
     def elide(self, string, *, ellipsis="\u2026"):
