@@ -228,7 +228,7 @@ class Printer:
         @see
           `write()`.
         """
-        self.write(string)
+        self.write(str(string))
         return self
 
 
@@ -241,7 +241,7 @@ class Printer:
         @see
           `write_right()`.
         """
-        self.write_right(string)
+        self.write_right(str(string))
         return self
 
 
