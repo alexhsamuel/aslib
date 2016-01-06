@@ -24,7 +24,11 @@ class Printer:
 
     - Can write strings right-justified (`write_right()`) or elided (`elide()`).
 
-    - Provides syntactic sugar.
+    - Can render HTML; use `html()`.
+
+    - Provides a `write()` method for use as a file-like object.
+
+    - Provides syntactic sugar with `__lshift__` and `__rshift__`.
 
     - Provides a context manager for styles and indents, with `__call__()`.
 
