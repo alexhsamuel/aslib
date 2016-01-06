@@ -34,6 +34,17 @@ class Printer:
 
     def __init__(self, write=None, *, width=None, indent="", 
                  style=StyleStack.DEFAULT_STYLE):
+        """
+        @param write
+          The method to write characters to the terminal.  If `None`, uses,
+          `sys.stdout.write`.
+        @param width
+          The fixed terminal width.  If `None`, calls `get_width()`.
+        @param indent
+          The initial indentation.
+        @prefix style
+          The initial style.
+        """
         if write is None:
             write = sys.stdout.write
         if width is None:
@@ -139,6 +150,11 @@ class Printer:
 
 
     def unstyle(self):
+        """
+        Removes the most recently set style.
+
+        Undoes the last call to `style()`.
+        """
         self._write(self.__style.pop())
 
 
