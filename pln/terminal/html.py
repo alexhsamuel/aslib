@@ -7,7 +7,7 @@ import shutil
 import sys
 
 from   . import ansi
-from   .printer import Printer
+from   .printer import Printer, NL
 from   ..text import get_common_indent
 import pln.log
 
@@ -82,10 +82,10 @@ class Converter(html.parser.HTMLParser):
     def convert(self, html, style={}):
         self.reset()
         if style:
-            self.__printer.push_style(**style)
+            self.__printer.style(**style)
         self.feed(html)
         if style:
-            self.__printer.pop_style()
+            self.__printer.unstyle()
 
 
     @log_call
@@ -93,7 +93,7 @@ class Converter(html.parser.HTMLParser):
         pr = self.__printer
 
         # If needed, emit a word separator before emitting the word.
-        if self.__hspace and not pr.at_start:
+        if self.__hspace and not pr.is_start:
             pr << " "
             self.__hspace = False
 
@@ -103,9 +103,9 @@ class Converter(html.parser.HTMLParser):
             log.warning("unknown tag: {}".format(tag))
         else:
             if indent:
-                pr.push_indent(indent)
+                pr.indent(indent)
             if style:
-                pr.push_style(**style)
+                pr.style(**style)
             self.__vspace = prenl
             self.__handle_text(prefix)
 
@@ -124,10 +124,10 @@ class Converter(html.parser.HTMLParser):
             pass
         else:
             if indent:
-                pr.pop_indent()
+                pr.unindent()
             if style:
-                pr.pop_style()
-            pr.newline(postnl - (1 if pr.at_start else 0))
+                pr.unstyle()
+            pr.newline(postnl - (1 if pr.is_start else 0))
 
         if tag == "pre":
             self.__pre = False
@@ -158,19 +158,18 @@ class Converter(html.parser.HTMLParser):
             else:
                 # Add vertical space if needed.  The first vspace ends the
                 # current line, so credit it if we're already at the start.
-                pr.newline(self.__vspace - (1 if pr.at_start else 0))
+                pr.newline(self.__vspace - (1 if pr.is_start else 0))
                 self.__vspace = 0
 
                 # Check if this word would take us past the terminal width.
-                if (not pr.at_start
-                    and (pr.column + (1 if self.__hspace else 0) + length) 
-                        > pr.width):
+                if (not pr.is_start
+                    and (1 if self.__hspace else 0) + length > pr.remaining):
                     # On to the next line.
-                    pr.newline()
+                    pr << NL
                     self.__hspace = False
 
                 # Don't need a separator at the start of a line.
-                if pr.at_start:
+                if pr.is_start:
                     self.__hspace = False
 
                 # If needed, emit a word separator before emitting the word.
@@ -217,10 +216,10 @@ def convert(html, *, style={}, width=sys.maxsize, **kw_args):
     printer = Printer(buffer.write, width=width)
     converter = Converter(printer, **kw_args)
     if style:
-        printer.push_style(**style)
+        printer.style(**style)
     converter.feed(html)
     if style:
-        printer.pop_style()
+        printer.unstyle()
     return buffer.getvalue()
 
 

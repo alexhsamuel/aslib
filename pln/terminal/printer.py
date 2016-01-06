@@ -1,22 +1,15 @@
+from   contextlib import suppress
 import sys
 
 from   . import get_width
+from   .. import itr
 from   .ansi import length, StyleStack
 
 #-------------------------------------------------------------------------------
 
-# FIXME: Docstrings.
+NL = "\n"
 
-# FIXME: API is terrible.  Fix it.  Maybe something like this?
-#
-#   >>> printer(fg="green") << "text"
-#   >>> printer(style_dict) <= "line"
-#   >>> printer(indent="... ") <= "line"
-#   >>> printer(style=...).html("<p>Blah blah.</p>")
-#   >>> printer.nl()
-#   >>> printer.start()  # nl if not at_start
-#   >>> printer.indent(...)
-#   >>> printer.unindent(...)
+# FIXME: Docstrings.
 
 class Printer:
     """
@@ -39,17 +32,9 @@ class Printer:
     @property
     def width(self):
         """
-        The effective width, i.e. the total width minus current indent.
+        The terminal width.
         """
-        return self.__width - length(self.__indent[-1])
-
-
-    @property
-    def at_start(self):
-        """
-        True if printing is at the start of a new line.
-        """
-        return self.__col is None
+        return self.__width
 
 
     @property
@@ -59,77 +44,101 @@ class Printer:
 
         The width of the current indentation is not included.
         """
-        return self.__col or 0
+        return length(self.__indent[-1]) if self.__col is None else self.__col
 
 
     @property
-    def indent(self):
+    def remaining(self):
+        """
+        The number of characters remaining on the line.
+        """
+        return self.__width - self.column
+
+
+    @property
+    def is_start(self):
+        """
+        True if printing is at the start of a new line.
+        """
+        return self.__col is None
+
+
+    def newline(self, count=1):
+        """
+        Advances to the next line.
+
+        @param count
+          The number of newlines to advance.  
+        """
+        if count < 1:
+            return
+        if self.is_start:
+            self._write(self.__indent[-1])
+        self._write("\n")
+        if count > 1:
+            self._write((self.__indent[-1] + "\n") * (count - 1))
+        self.__col = None
+
+
+    @property
+    def indentation(self):
+        """
+        The indentation that will be used for the next line.
+        """
         return self.__indent[-1]
 
 
-    def push_indent(self, indent):
+    def indent(self, indent):
+        """
+        Appends `intent` to the current `indentation`.
+        """
         self.__indent.append(self.__indent[-1] + indent)
 
 
-    def pop_indent(self):
+    def unindent(self):
+        """
+        Removes the most recently appended indentation.
+
+        Undoes the last call to `indent()`.
+        """
         self.__indent.pop()
 
 
-    def push_style(self, **style):
-        self.write_string(self.__style.push(**style))
-
-
-    def pop_style(self):
-        self.write_string(self.__style.pop())
-
-
-    def write_string(self, string, *, style={}):
+    def style(self, **style):
         """
-        Prints a string on the current line.
+        Sets style.
 
-        `string` may not contain newlines.  Does not end the current line.
+        @keyword style
+          See `ansi.style()`.
         """
-        if len(string) == 0:
-            return
-        assert "\n" not in string, repr(string)
+        self._write(self.__style.push(**style))
 
-        if style:
-            self.push_style(**style)
+
+    def unstyle(self):
+        self._write(self.__style.pop())
+
+
+    def _start_line(self):
+        """
+        Starts the current line, if necessary.
+        """
         if self.__col is None:
-            if length(string) > 0:
-                # FIXME: Hacky.  What's the style policy for indentation?
-                self.push_style(**StyleStack.DEFAULT_STYLE)
-                self._write(self.__indent[-1])
-                self.pop_style()
-                self._write(string)
-                self.__col = length(string)
-            else:
-                self._write(string)
-        else:
-            self._write(string)
-            self.__col += length(string)
-        if style:
-            self.pop_style()
+            # FIXME: Hacky.  What's the style policy for indentation?
+            with self(**StyleStack.DEFAULT_STYLE):
+                self._write(self.indentation)
+            self.__col = length(self.indentation)
 
 
-    def write_line(self, string, *, style={}):
-        self.write_string(string, style=style)
-        self.newline()
-
-
-    def write(self, string, *, style={}):
-        if style:
-            self.push_style(**style)
-        if "\n" in string:
-            lines = string.split("\n")
-            for line in lines[: -1]:
-                self.write_string(line)
-                self.newline()
-            self.write_string(lines[-1])
-        else:
-            self.write_string(string)
-        if style:
-            self.pop_style()
+    def write(self, string):
+        *lines, last = string.split("\n")
+        for line in lines:
+            self._start_line()
+            self._write(line)
+            self.newline()
+        if len(last) > 0:
+            self._start_line()
+            self._write(last)
+            self.__col += length(last)
 
 
     def fits(self, string):
@@ -139,56 +148,115 @@ class Printer:
         return self.column + length(string) <= self.width
 
 
-    def elide(self, string, *, style={}, ellipsis="\u2026"):
+    def elide(self, string, *, ellipsis="\u2026"):
         """
-        Prints `string`, elided at the end if it doesn't fit the current line.
+        Prints text elided to the width.
+
+        Prints each line of `string`, eliding it if it doesn't fit the current
+        line.  The string is elided by truncating sufficient characters and
+        appending `ellipsis`.  
         """
-        space = self.width - self.column
-        if length(string) > space:
-            string = string[: space - length(ellipsis)] + ellipsis
-        self.write_line(string, style=style)
+        lel = length(ellipsis)
+        for last, line in itr.last(string.split("\n")):
+            self._start_line()
+            if length(line) > self.remaining:
+                line = line[: self.remaining - lel] + ellipsis
+            self._write(line)
+            if not last:
+                self.newline()
 
 
-    def right_justify(self, string, style={}):
+    def write_right(self, string):
         """
         Prints right-justified.
 
-        Prints `string` right justified on the current line, if it fits,
-        on the next line otherwise, followed in either case by a newline.
+        Prints `string` at the end of the current line, if it fits, on the end
+        of the next line otherwise.  Does not end the line; `column` is at
+        `width` on return.
         """
-        l = length(string)
-        if self.column + l > self.width:
+        self._start_line()
+        pad = self.remaining - length(string)
+        if pad < 0:
             self.newline()
-        self.write_string(
-            (self.width - (self.column + l)) * " " + string,
-            style=style)
-        self.newline()
-
-
-    def newline(self, count=1):
-        if count < 1:
-            return
-        if self.at_start:
-            self._write(self.__indent[-1])
-        self._write("\n")
-        if count > 1:
-            self._write((self.__indent[-1] + "\n") * (count - 1))
-        self.__col = None
-
-
-    def print(self, *args, **kw_args):
-        print(*args, file=self, **kw_args)
+        else:
+            self._write(pad * " ")
+        self._write(string)
+        self.__col = self.width
 
 
     def __lshift__(self, string):
-        self.write_string(string)
+        """
+        Prints `string`.
+
+        @return
+          `self`
+        @see
+          `write()`.
+        """
+        self.write(string)
         return self
 
 
-    def __le__(self, line):
-        self.write_string(line)
-        self.newline()
+    def __rshift__(self, string):
+        """
+        Prints `string` right-justified.
+
+        @return
+          `self`
+        @see
+          `write_right()`.
+        """
+        self.write_right(string)
         return self
+
+
+    def html(self, html):
+        """
+        Renders HTML `html` to the printer.
+        """
+        from .html import Converter
+        Converter(self).convert(html)
+        return self
+
+
+    class _StyleContext:
+        """
+        Used by `__call__()`.
+        """
+
+        def __init__(self, printer, *, indent=None, **style):
+            self.__printer = printer
+            self.__indent = indent
+            self.__style = style
+
+
+        def __enter__(self):
+            if self.__indent:
+                self.__printer.indent(self.__indent)
+            if self.__style:
+                self.__printer.style(**self.__style)
+
+
+        def __exit__(self, *exc_info):
+            if self.__style:
+                self.__printer.unstyle()
+            if self.__indent:
+                self.__printer.unindent()
+                
+
+
+    def __call__(self, *, indent=None, **style):
+        """
+        Returns a context manager that sets style and/or indent.
+
+        The indentation and style last for the context of the context manager.
+
+        @param indent
+          If not `None`, the indentation to append.
+        @param style
+          Style variables.  See `ansi.style()`.
+        """
+        return self._StyleContext(self, indent=indent, **style)
 
 
 
