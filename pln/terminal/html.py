@@ -1,3 +1,4 @@
+import html.entities
 import html.parser
 import io
 import logging
@@ -79,6 +80,7 @@ class Converter(html.parser.HTMLParser):
 
 
     def convert(self, html, style={}):
+        self.reset()
         if style:
             self.__printer.push_style(**style)
         self.feed(html)
@@ -197,7 +199,7 @@ class Converter(html.parser.HTMLParser):
 
     @log_call
     def handle_entityref(self, name):
-        pass
+        self.__printer.write(chr(html.entities.name2codepoint[name]))
 
 
 
