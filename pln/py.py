@@ -138,6 +138,50 @@ def import_look_up(name):
         raise NameError(name)
     
 
+def export(obj):
+    """
+    Marks a top-level object in a module for export.
+
+    This decorator adds the name of `obj` to global `__all__`.  If `__all__`
+    doesn't exist in the module namespace, it is initialized to an empty list.
+
+    Use like this::
+
+      @export
+      def foo(a, b):
+          return 2 * a + b
+
+    @param obj
+      The object to add.  It should be a top-level object with a qualname
+      that does not contain any dots.
+    @return
+      `obj`.
+    @note
+      This decorator does not work on names for values, such as strings,
+      as those do not have a `__qualname__`.
+    """
+    try:
+        name = obj.__qualname__
+    except AttributeError:
+        raise TypeError("obj must have a __qualname__")
+    # Make sure the object's name is unqualified.
+    if "." in name:
+        raise TypeError("obj must have a simple __qualname__")
+
+    # Get the caller's globals.
+    glbls = inspect.stack()[1][0].f_globals
+    # Get or add an __all__ list.
+    all_names = glbls.setdefault("__all__", [])
+    # Add the name.
+    all_names.append(name)
+
+    return obj
+    
+
+# FIXME: This doesn't work for values.  Add one that takes a name, or something.
+
+#-------------------------------------------------------------------------------
+
 def dump_attrs(obj):
     width = shutil.get_terminal_size().columns
     for name in sorted(dir(obj)):

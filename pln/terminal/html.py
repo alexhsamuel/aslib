@@ -12,9 +12,6 @@ from   ..text import get_common_indent
 import pln.log
 
 log = pln.log.get()
-# FIXME: Remove log_calls.
-# log.setLevel(logging.INFO)
-log_call = pln.log.log_call(log.info)
 
 #-------------------------------------------------------------------------------
 
@@ -88,7 +85,6 @@ class Converter(html.parser.HTMLParser):
             self.__printer.unstyle()
 
 
-    @log_call
     def handle_starttag(self, tag, attrs):
         pr = self.__printer
 
@@ -114,7 +110,6 @@ class Converter(html.parser.HTMLParser):
             self.__pre = True
 
 
-    @log_call
     def handle_endtag(self, tag):
         pr = self.__printer
 
@@ -133,7 +128,6 @@ class Converter(html.parser.HTMLParser):
             self.__pre = False
 
 
-    @log_call
     def handle_data(self, data):
         assert isinstance(data, str)
         if self.__pre:
@@ -196,7 +190,6 @@ class Converter(html.parser.HTMLParser):
         self.__printer.write(text)
 
 
-    @log_call
     def handle_entityref(self, name):
         self.__printer.write(chr(html.entities.name2codepoint[name]))
 

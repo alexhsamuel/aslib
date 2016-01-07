@@ -8,19 +8,11 @@ import ctypes
 import os
 import sys
 
-__all__ = ()
+from   ..py import export
 
 #-------------------------------------------------------------------------------
 
 if sys.platform == "darwin":
-
-    __all__.extend((
-        "ttyslot",
-        "getttyent",
-        "endttyent",
-        "get_name",
-        "get_device",
-    ))
 
     class ttyent(ctypes.Structure):
         _fields_ = [
@@ -42,6 +34,7 @@ if sys.platform == "darwin":
     # FIXME: This doesn't seem to work if none of stdin, stdout, stderr are
     # connected.
 
+    @export
     def ttyslot():
         """
         Returns the slot number of the connected TTY.
@@ -57,6 +50,7 @@ if sys.platform == "darwin":
     _getttyent.argtypes = []
     _getttyent.restype = ctypes.POINTER(ttyent)
 
+    @export
     def getttyent():
         """
         Returns the next entry from the TTY file.
@@ -80,6 +74,7 @@ if sys.platform == "darwin":
     _endttyent.argtypes = []
     _endttyent.restype = ctypes.c_int
 
+    @export
     def endttyent():
         """
         Ends enumeration of the TTY file.
@@ -91,6 +86,7 @@ if sys.platform == "darwin":
             raise OSError(os.strerror(ctypes.get_errno()))
 
 
+    @export
     def get_name():
         """
         Returns the name of the TTY attached to the process.
@@ -103,6 +99,7 @@ if sys.platform == "darwin":
             endttyent()
 
 
+    @export
     def get_path(name):
         """
         Returns the device path for TTY named `name`.
