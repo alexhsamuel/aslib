@@ -1,4 +1,6 @@
+import os
 import shutil
+import sys
 
 #-------------------------------------------------------------------------------
 
@@ -6,8 +8,14 @@ def get_width():
     """
     Returns the width in columns.
     """
-    # FIXME: This doesn't handle redirected stdout; use /proc/self/tty or 
-    # something.
-    return shutil.get_terminal_size().columns
+    if sys.platform == "darwin":
+        from . import tty
+        tty_path = tty.get_device(tty.get_name())
+        with open(tty_path) as file:
+            return os.get_terminal_size(file.fileno()).columns
+    else:
+        # FIXME: Linux
+        return shutil.get_terminal_size().columns
+
 
 
