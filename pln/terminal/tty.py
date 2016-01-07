@@ -1,10 +1,26 @@
+"""
+Low-level TTY query methods.
+"""
+
+#-------------------------------------------------------------------------------
+
 import ctypes
 import os
 import sys
 
+__all__ = ()
+
 #-------------------------------------------------------------------------------
 
 if sys.platform == "darwin":
+
+    __all__.extend((
+        "ttyslot",
+        "getttyent",
+        "endttyent",
+        "get_name",
+        "get_device",
+    ))
 
     class ttyent(ctypes.Structure):
         _fields_ = [
@@ -27,6 +43,9 @@ if sys.platform == "darwin":
     # connected.
 
     def ttyslot():
+        """
+        Returns the slot number of the connected TTY.
+        """
         result = _ttyslot()
         if result == 0:
             raise OSError(os.strerror(ctypes.get_errno()))
@@ -39,6 +58,17 @@ if sys.platform == "darwin":
     _getttyent.restype = ctypes.POINTER(ttyent)
 
     def getttyent():
+        """
+        Returns the next entry from the TTY file.
+
+        The first call to this function returns the first entry; subsequent
+        calls return subsequent entries.  Call `endttyent()` when done.
+
+        @rtype
+          `ttyent`.
+        @see
+          Invoke `man 5 ttys` and `man getttyent` for details.
+        """
         result = _getttyent()
         if result == 0:
             raise OSError(os.strerror(ctypes.get_errno()))
@@ -51,6 +81,12 @@ if sys.platform == "darwin":
     _endttyent.restype = ctypes.c_int
 
     def endttyent():
+        """
+        Ends enumeration of the TTY file.
+
+        @see
+          `getttyent()`.
+        """
         if _endttyent() != 1:
             raise OSError(os.strerror(ctypes.get_errno()))
 
@@ -67,7 +103,7 @@ if sys.platform == "darwin":
             endttyent()
 
 
-    def get_device(name):
+    def get_path(name):
         """
         Returns the device path for TTY named `name`.
         """

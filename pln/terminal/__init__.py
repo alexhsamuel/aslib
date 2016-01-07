@@ -10,7 +10,7 @@ def get_width():
     """
     if sys.platform == "darwin":
         from . import tty
-        tty_path = tty.get_device(tty.get_name())
+        tty_path = tty.get_path(tty.get_name())
         with open(tty_path) as file:
             return os.get_terminal_size(file.fileno()).columns
     else:
