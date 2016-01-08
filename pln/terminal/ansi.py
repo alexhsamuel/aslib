@@ -251,6 +251,8 @@ def inverse_sgr(*, fg=None, bg=None, bold=None, underline=None, blink=None,
         reverse=reverse, conceal=conceal)
 
 
+# FIXME: We need a Style class.
+
 def style(**kw_args):
     """
     Returns a function that applies graphics style to text.
