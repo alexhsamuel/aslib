@@ -1,3 +1,35 @@
+"""
+Convenience class for formatting to a fixed-width ANSI terminal.
+
+`Printer` is not a good example of OO design; rather, it is a convenience class
+that pulls together various loosely-coupled pieces of functionality that 
+together make it easy to produce formatted terminal output.  The class includes
+a number of dubious bits of syntactic sugar to make the formatting code concise.
+
+For example::
+
+  from pln.terminal.printer import Printer, NL
+  printer = Printer()
+
+  # Print a message.
+  printer << "Hello, world!" << NL
+
+  # Print a message with some ANSI terminal styles applied.
+  with printer(fg="green", bold=True):
+      printer << "This is quite important!" << NL << NL
+
+  # Render some HTML, with indentation on each line.
+  with printer(indent=">> "):
+      printer.html(html_source)
+
+  # Print a right-justified message.
+  printer >> "Bye!"
+
+Note that `NL` is just an alias for `"\n"`; you may include newlines directly.
+"""
+
+#-------------------------------------------------------------------------------
+
 from   contextlib import suppress
 import sys
 
