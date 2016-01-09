@@ -25,7 +25,7 @@ For example::
   # Print a right-justified message.
   printer >> "Bye!"
 
-Note that `NL` is just an alias for `"\n"`; you may include newlines directly.
+Note that `NL` is just an alias for `"\\n"`; you may include newlines directly.
 """
 
 #-------------------------------------------------------------------------------
