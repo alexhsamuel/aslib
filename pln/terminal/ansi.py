@@ -10,6 +10,7 @@ from   enum import Enum
 import html.parser
 from   html.parser import HTMLParseError as ParseError
 from   math import floor
+import re
 
 #-------------------------------------------------------------------------------
 
@@ -82,7 +83,7 @@ def COLORMAP_BACKGROUND(i):
 #-------------------------------------------------------------------------------
 
 COLOR_NAMES = dict(
-    black       =232,
+    black       =  0,
     dark_red    =  1,
     dark_green  =  2,
     brown       =  3,
@@ -97,7 +98,7 @@ COLOR_NAMES = dict(
     blue        = 12,
     pink        = 13,
     cyan        = 14,
-    white       =255,
+    white       =231,
 )
 
 
@@ -105,6 +106,8 @@ def parse_rgb_triple(triple):
     if not triple.startswith("#"):
         raise ValueError("RGB triple doesn't start with #")
     if len(triple) == 4:
+        # Multiply single digits by 0x11 to repeat digits, e.g. #1a6 expands
+        # to #11aa66.
         return tuple( int(x, 16) * 17 for x in triple[1 : 4] )
     elif len(triple) == 7:
         rgb = triple[1 : 3], triple[3 : 5], triple[5 : 7]
@@ -144,7 +147,14 @@ def get_color(value):
             pass
         else:
             if 0 <= gray_value <= 100:
-                return 232 + gray_value * 24 // 101
+                # Use black (0), white (231), and 24 additional gray values in
+                # the range 232-255.
+                gray_value = gray_value * 26 // 101
+                return (
+                    0 if gray_value == 0 
+                    else 231 if gray_value == 25 
+                    else 231 + gray_value
+                )
 
     try:
         return COLOR_NAMES[val]
@@ -177,8 +187,6 @@ def sgr(*, fg=None, bg=None, bold=None, underline=None, blink=None,
     @param bg
       Background color name or number, or `"default"` for the implementation's
       default. 
-    @param intensity
-      `"bold"`, `"faint"`, or `"normal"`.
     @param underline
       True to enable single underlining; false to disable.
     @param blink
@@ -208,7 +216,8 @@ def sgr(*, fg=None, bg=None, bold=None, underline=None, blink=None,
         codes.extend((48, 5, get_color(bg)))
 
     if bold is not None:
-        codes.append(1 if bold else 21)
+        # FIXME: Might be 22 for OSX, 21 for Linux?
+        codes.append(1 if bold else 22)
     if underline is not None:
         codes.append(4 if underline else 24)
     if blink is not None:
@@ -218,42 +227,128 @@ def sgr(*, fg=None, bg=None, bold=None, underline=None, blink=None,
     if conceal is not None:
         codes.append(8 if conceal else 28)
 
-    return SGR(*codes)
+    return SGR(*codes) if len(codes) > 0 else ""
 
 
-def inverse_sgr(*, fg=None, bg=None, bold=False, underline=False, blink=False,
-                reverse=False, conceal=False):
-    """
-    Returns the inverse SGR sequence to `sgr()`.
-    """
-    codes = []
+def inverse_sgr(*, fg=None, bg=None, bold=None, underline=None, blink=None,
+                reverse=None, conceal=None):
     if fg is not None:
-        codes.append(39)
+        fg = "default"
     if bg is not None:
-        codes.append(49)
-    if bold:
-        codes.append(21)
-    if underline:
-        codes.append(24)
-    if blink:
-        codes.append(25)
-    if reverse:
-        codes.append(27)
-    if conceal:
-        codes.append(28)
-    return SGR(*codes)
+        bg = "default"
+    if bold is not None:
+        bold = not bold
+    if underline is not None:
+        underline = not underline
+    if blink is not None:
+        blink = not blink
+    if reverse is not None:
+        reverse = not reverse
+    if conceal is not None:
+        conceal = not conceal
+    return sgr(
+        fg=fg, bg=bg, bold=bold, underline=underline, blink=blink,
+        reverse=reverse, conceal=conceal)
 
+
+# FIXME: We need a Style class.
 
 def style(**kw_args):
     """
     Returns a function that applies graphics style to text.
 
     The styling function accepts a single string argument, and returns that
-    string styled and followed by a graphics reset.
+    string styled and followed by the inverse styling.
     """
     escape = sgr(**kw_args)
     unescape = inverse_sgr(**kw_args)
     return lambda text: escape + str(text) + unescape
+
+
+# Single-style shortcuts.
+
+def fg(color):
+    return style(fg=color)
+
+
+def bg(color):
+    return style(bg=color)
+
+
+bold        = style(bold=True)
+underline   = style(underline=True)
+blink       = style(blink=True)
+reverse     = style(reverse=True)
+concel      = style(conceal=True)
+
+#-------------------------------------------------------------------------------
+
+ESCAPE_REGEX = re.compile(re.escape(CSI) + r"[^@-~]*.")
+
+# FIXME: Use extension version from fixfmt.
+def length(string):
+    return len(ESCAPE_REGEX.sub("", string))
+
+
+# FIXME: Elsewhere.
+def dict_diff(dict0, dict1):
+    assert len(dict0) == len(dict1)
+    return { k: dict1[k] for k in dict0 if dict1[k] != dict0[k] }
+
+
+class StyleStack:
+    """
+    Stack of nested styles.
+    """
+
+    DEFAULT_STYLE = {
+        "fg"        : "default",
+        "bg"        : "default",
+        "bold"      : False,
+        "underline" : False,
+        "blink"     : False,
+        "reverse"   : False,
+        "conceal"   : False,
+    }
+
+
+    def __init__(self, style=DEFAULT_STYLE):
+        """
+        @param style
+          The initial style.
+        """
+        self.__stack = [style]
+
+
+    def push(self, **styles):
+        """
+        Pushes a new style onto the stack.
+
+        @return
+          Escape codes to produce the new style.
+        """
+        bad_keys = set(styles) - set(self.DEFAULT_STYLE)
+        if len(bad_keys) > 0:
+            raise TypeError("unknown styles: " + ", ".join(bad_keys))
+
+        old = self.__stack[-1]
+        new = old.copy()
+        new.update(styles)
+        self.__stack.append(new)
+        return sgr(**dict_diff(old, new))
+
+
+    def pop(self):
+        """
+        Pops a style off the stack.
+
+        @return
+          Escape codes to revert to the previous style.
+        """
+        old = self.__stack.pop()
+        new = self.__stack[-1]
+        return sgr(**dict_diff(old, new))
+                
 
 
 #-------------------------------------------------------------------------------
@@ -287,10 +382,10 @@ class Parser(html.parser.HTMLParser):
 
     # Renaming tags to SGR attributes.
     __RENAME = {
-        "b": "bold",
+        "b"         : "bold",
         "background": "bg",
         "foreground": "fg",
-        "u": "underline",
+        "u"         : "underline",
     }
 
     def __init__(self):
@@ -360,6 +455,7 @@ class Parser(html.parser.HTMLParser):
 
 
     def feed(self, *args, **kw_args):
+        # Just make this method chainable.
         super().feed(*args, **kw_args)
         return self
 
@@ -381,5 +477,35 @@ def convert_markup(text):
       `Parser` for markup syntex.
     """
     return Parser().feed(text).result
+
+
+#-------------------------------------------------------------------------------
+# For testing purposes.
+
+def print_colors(print=print):
+    """
+    Prints color samples.
+    """
+    print(underline("Basic Colors"))
+    for color in range(16):
+        print(
+            "    {:2x} ".format(color) + fg(color)("TEST") + "  ", 
+            end="\n" if color % 6 == 5 else "")
+    print()
+    print(underline("RGB Colors"))
+    for r in range(6):
+        for g in range(6):
+            for b in range(6):
+                color = 16 + 36 * r + 6 * g + b
+                print("{}{}{} {:2x} ".format(r, g, b, color)
+                    + fg(color)("TEST") + "  ", 
+                    end="\n" if color % 6 == 3 else "")
+    print(underline("Gray Scale"))
+    for i in range(0, 101, 4):
+        color = get_color("gray{}".format(i))
+        name = "g{:02d}".format(i) if i < 100 else "   "
+        print("{} {:2x} ".format(name, color) + fg(color)("TEST") + "  ", 
+            end="\n" if i % 24 == 20 else "")
+    print()
 
 

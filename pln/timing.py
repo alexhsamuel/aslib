@@ -91,6 +91,8 @@ def _format_elapsed(elapsed):
         return "{:.1f} ms".format(elapsed * 1e+3)
     elif elapsed < 1:
         return "{:.0f} ms".format(elapsed * 1e+3)
+    elif elapsed < 10:
+        return "{:.2f} s".format(elapsed)
     elif elapsed < 100:
         return "{:.1f} s".format(elapsed)
     else:
