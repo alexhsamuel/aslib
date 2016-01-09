@@ -181,7 +181,7 @@ class Converter(html.parser.HTMLParser):
             # Remove the first and/or last lines, if they're blank.
             if lines[0].strip() == "":
                 lines = lines[1 :]
-            if lines[-1].strip() == "":
+            if len(lines) > 0 and lines[-1].strip() == "":
                 lines = lines[: -1]
             # Remove common indentation.
             _, lines = get_common_indent(lines)
