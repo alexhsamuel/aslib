@@ -44,8 +44,8 @@ class Converter(html.parser.HTMLParser):
         "h2"    : ("", "\u2605 ", 2, 1, {"bold": True}),
         "h3"    : ("", "\u2734 ", 1, 1, {}),
         "ol"    : ("  ", "", 1, 1, {}), 
-        "p"     : ("", "", 2, 1, {}),
-        "pre"   : ("\u2503 ", "", 1, 1, {"fg": "gray20"}),
+        "p"     : ("", "", 1, 2, {}),
+        "pre"   : ("\u2503 ", "", 1, 2, {"fg": "gray20"}),
         "ul"    : ("  ", "", 1, 1, {}),
 
         # Inline elements
@@ -101,7 +101,7 @@ class Converter(html.parser.HTMLParser):
                 pr.indent(indent)
             if style:
                 pr.style(**style)
-            self.__vspace = prenl
+            self.__vspace = max(self.__vspace, prenl)
             self.__handle_text(prefix)
 
         if tag == "pre":
@@ -148,7 +148,7 @@ class Converter(html.parser.HTMLParser):
                 # seen it and require a separation for the next word.
                 self.__hspace = True
 
-            else:
+            elif len(word) > 0:
                 # Add vertical space if needed.  The first vspace ends the
                 # current line, so credit it if we're already at the start.
                 pr.newline(self.__vspace - (1 if pr.is_start else 0))
