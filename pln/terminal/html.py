@@ -60,7 +60,8 @@ class Converter(html.parser.HTMLParser):
 
 
     # FIXME: Suffix?  Or remove prefix?
-    def __init__(self, printer, *, normalize_pre=True):
+    # FIXME: Remove normalize_pre?  This isn't the right place for that logic.
+    def __init__(self, printer, *, normalize_pre=False):
         super().__init__()
 
         self.__printer = printer
@@ -72,8 +73,8 @@ class Converter(html.parser.HTMLParser):
         self.__vspace = 0
         # Prefix for the next word.
         self.__prefix = None
-        # Are we in a <pre> element?
-        self.__pre = False
+        # If we in a <pre> element, a string of collected text; None otherwise.
+        self.__pre = None
 
 
     def convert(self, html, style={}):
@@ -107,10 +108,14 @@ class Converter(html.parser.HTMLParser):
 
         if tag == "pre":
             # Enable special handling for preformatted elements.
-            self.__pre = True
+            self.__pre = ""
 
 
     def handle_endtag(self, tag):
+        if tag == "pre":
+            self.__handle_pre_text(self.__pre)
+            self.__pre = None
+
         pr = self.__printer
 
         try:
@@ -124,16 +129,13 @@ class Converter(html.parser.HTMLParser):
                 pr.unstyle()
             pr.newline(postnl - (1 if pr.is_start else 0))
 
-        if tag == "pre":
-            self.__pre = False
-
 
     def handle_data(self, data):
         assert isinstance(data, str)
-        if self.__pre:
-            self.__handle_pre_text(data)
-        else:
+        if self.__pre is None:
             self.__handle_text(data)
+        else:
+            self.__pre += data
 
 
     def __handle_text(self, text):
@@ -175,8 +177,12 @@ class Converter(html.parser.HTMLParser):
 
 
     def __handle_pre_text(self, text):
+        """
+        Emits preformatted text.
+
+        Assumes `text` is the complete body of the pre element.
+        """
         if self.__normalize_pre:
-            # We assume (?) that the entire pre text is delivered together.
             lines = text.split("\n")
             # Remove the first and/or last lines, if they're blank.
             if lines[0].strip() == "":
@@ -191,7 +197,11 @@ class Converter(html.parser.HTMLParser):
 
 
     def handle_entityref(self, name):
-        self.__printer.write(chr(html.entities.name2codepoint[name]))
+        char = chr(html.entities.name2codepoint[name])
+        if self.__pre is None:
+            self.__printer.write(char)
+        else:
+            self.__pre += char
 
 
 
