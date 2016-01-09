@@ -60,12 +60,10 @@ class Converter(html.parser.HTMLParser):
 
 
     # FIXME: Suffix?  Or remove prefix?
-    # FIXME: Remove normalize_pre?  This isn't the right place for that logic.
-    def __init__(self, printer, *, normalize_pre=False):
+    def __init__(self, printer):
         super().__init__()
 
         self.__printer = printer
-        self.__normalize_pre = bool(normalize_pre)
 
         # True if horizontal space is required before the next word.
         self.__hspace = False
@@ -73,8 +71,8 @@ class Converter(html.parser.HTMLParser):
         self.__vspace = 0
         # Prefix for the next word.
         self.__prefix = None
-        # If we in a <pre> element, a string of collected text; None otherwise.
-        self.__pre = None
+        # True if we are in a <pre> element.
+        self.__pre = False
 
 
     def convert(self, html, style={}):
@@ -108,13 +106,12 @@ class Converter(html.parser.HTMLParser):
 
         if tag == "pre":
             # Enable special handling for preformatted elements.
-            self.__pre = ""
+            self.__pre = True
 
 
     def handle_endtag(self, tag):
         if tag == "pre":
-            self.__handle_pre_text(self.__pre)
-            self.__pre = None
+            self.__pre = False
 
         pr = self.__printer
 
@@ -132,10 +129,10 @@ class Converter(html.parser.HTMLParser):
 
     def handle_data(self, data):
         assert isinstance(data, str)
-        if self.__pre is None:
-            self.__handle_text(data)
+        if self.__pre:
+            self.__handle_pre_text(data)
         else:
-            self.__pre += data
+            self.__handle_text(data)
 
 
     def __handle_text(self, text):
@@ -179,29 +176,13 @@ class Converter(html.parser.HTMLParser):
     def __handle_pre_text(self, text):
         """
         Emits preformatted text.
-
-        Assumes `text` is the complete body of the pre element.
         """
-        if self.__normalize_pre:
-            lines = text.split("\n")
-            # Remove the first and/or last lines, if they're blank.
-            if lines[0].strip() == "":
-                lines = lines[1 :]
-            if len(lines) > 0 and lines[-1].strip() == "":
-                lines = lines[: -1]
-            # Remove common indentation.
-            _, lines = get_common_indent(lines)
-            text = "\n".join(lines)
-
         self.__printer.write(text)
 
 
     def handle_entityref(self, name):
         char = chr(html.entities.name2codepoint[name])
-        if self.__pre is None:
-            self.__printer.write(char)
-        else:
-            self.__pre += char
+        self.__printer.write(char)
 
 
 
