@@ -61,7 +61,7 @@ class Converter(html.parser.HTMLParser):
 
     # FIXME: Suffix?  Or remove prefix?
     def __init__(self, printer):
-        super().__init__()
+        super().__init__(convert_charrefs=True)
 
         self.__printer = printer
 
@@ -80,6 +80,7 @@ class Converter(html.parser.HTMLParser):
         if style:
             self.__printer.style(**style)
         self.feed(html)
+        self.close()
         if style:
             self.__printer.unstyle()
 
