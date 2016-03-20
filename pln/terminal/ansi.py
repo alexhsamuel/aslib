@@ -8,7 +8,6 @@ See https://en.wikipedia.org/wiki/ANSI_escape_code.
 
 from   enum import Enum
 import html.parser
-from   html.parser import HTMLParseError as ParseError
 from   math import floor
 import re
 
@@ -353,6 +352,15 @@ class StyleStack:
 
 #-------------------------------------------------------------------------------
 
+class ParseError(Exception):
+    """
+    An error while parsing pseudo-HTML.
+    """
+
+    pass
+
+
+
 class Parser(html.parser.HTMLParser):
     """
     Parses pseudo-HTML markup into text with ANSI escapes.
@@ -455,6 +463,10 @@ class Parser(html.parser.HTMLParser):
 
 
     def feed(self, *args, **kw_args):
+        """
+        @raise ParseError
+          The input coudl not be parsed.
+        """
         # Just make this method chainable.
         super().feed(*args, **kw_args)
         return self
