@@ -1,4 +1,5 @@
 # FIXME: Handle stdin.
+# FIXME: Trim or wrap long lines.
 # FIXME: Handle KeyboardInterrupt correctly.
 # FIXME: Handle BrokenPipeError correctly.
 
@@ -106,20 +107,23 @@ def main():
     with closing(asyncio.get_event_loop()) as loop:
         start = time.monotonic()
         try:
-            result = loop.run_until_complete(run_command(loop, sys.argv[1 :]))
+            exit = loop.run_until_complete(run_command(loop, sys.argv[1 :]))
         except KeyboardInterrupt:
-            result = KEYBOARD_INTERRUPT_EXIT_STATUS
+            exit = KEYBOARD_INTERRUPT_EXIT_STATUS
         end = time.monotonic()
+
+    usage = resource.getrusage(resource.RUSAGE_CHILDREN)
 
     if col != 0:
         write("\n")
-    usage = resource.getrusage(resource.RUSAGE_CHILDREN)
+    # Show the exit status.
     write(
         EXIT_STYLE("exit: ")
-        + (USAGE_STYLE("0") if result == 0
-           else STDERR_STYLE(str(result)) if result > 0 
-           else STDERR_STYLE(get_signal_name(-result)))
+        + (USAGE_STYLE("0") if exit == 0
+           else STDERR_STYLE(str(exit)) if exit > 0 
+           else STDERR_STYLE(get_signal_name(-exit)))
         + " ")
+    # Show resource usage.
     write(" ".join(
         EXIT_STYLE(l + ": ") + USAGE_STYLE(v)
         for l, v in (
@@ -130,7 +134,7 @@ def main():
         )
     ) + "\n")
 
-    raise SystemExit(result)
+    raise SystemExit(exit)
 
 
 if __name__ == "__main__":
