@@ -18,20 +18,18 @@ from   pln.terminal import ansi, get_size
 # Because that's what the shell does.  (?)
 KEYBOARD_INTERRUPT_EXIT_STATUS = 130
 
-# FIXME
-def go_to_column(col):
-    return ansi.CSI + str(col + 1) + "G"
-
-
-write = sys.stdout.write
-
-width, _ = get_size()  # FIXME: Should be dynamic.
-col = 0
-
-TIME_STYLE = ansi.style(fg="light_gray")
-EXIT_STYLE = ansi.style(fg="light_gray")
+TIME_STYLE  = ansi.style(fg="light_gray")
+EXIT_STYLE  = ansi.style(fg="light_gray")
 USAGE_STYLE = ansi.style(fg="#80c0ff")
 
+# Our own output goes to stdout.
+write = sys.stdout.write
+
+# The terminal width.
+width, _    = get_size()  # FIXME: Should be dynamic.
+
+# The current column.
+col         = 0
 
 last_timestamp = None
 
@@ -41,9 +39,9 @@ def show_time(time):
     timestamp = " " + format(time, "%H:%M:%S.%f")[: -3]
 
     if timestamp != last_timestamp:
-        write(go_to_column(width - len(timestamp)))
+        write(ansi.to_column(width - len(timestamp)))
         write(TIME_STYLE(timestamp))
-        write(go_to_column(col))
+        write(ansi.to_column(col))
         last_timestamp = timestamp
     
 
