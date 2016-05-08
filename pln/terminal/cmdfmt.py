@@ -27,17 +27,31 @@ write = sys.stdout.write
 
 width, _ = get_size()  # FIXME: Should be dynamic.
 col = 0
-last_timestamp = None
 
 TIME_STYLE = ansi.style(fg="light_gray")
 EXIT_STYLE = ansi.style(fg="light_gray")
 USAGE_STYLE = ansi.style(fg="#80c0ff")
 
+
+last_timestamp = None
+
+def show_time(time):
+    global last_timestamp
+
+    timestamp = " " + format(time, "%H:%M:%S.%f")[: -3]
+
+    if timestamp != last_timestamp:
+        write(go_to_column(width - len(timestamp)))
+        write(TIME_STYLE(timestamp))
+        write(go_to_column(col))
+        last_timestamp = timestamp
+    
+
 def show(text, style=None):
     global col
     global last_timestamp
 
-    timestamp = " " + format(datetime.now(), "%H:%M:%S.%f")[: -3]
+    time = datetime.now()
 
     for line in re.split("(\n)", text):
         if line == "":
@@ -49,12 +63,7 @@ def show(text, style=None):
             assert "\n" not in line
             write(line if style is None else style(line))
             col += len(text) 
-
-            if timestamp != last_timestamp:
-                write(go_to_column(width - len(timestamp)))
-                write(TIME_STYLE(timestamp))
-                write(go_to_column(col))
-                last_timestamp = timestamp
+            show_time(time)
 
     sys.stdout.flush()
     
@@ -75,7 +84,7 @@ async def run_command(loop, argv):
         *argv, loop=loop, stdout=PIPE, stderr=PIPE)
 
     stdout = format_output(proc.stdout, None)
-    stderr = format_output(proc.stderr, ansi.style(fg="#600000"))
+    stderr = format_output(proc.stderr, ansi.style(fg="#400000"))
 
     try:
         result, *_ = await asyncio.gather(proc.wait(), stdout, stderr)
