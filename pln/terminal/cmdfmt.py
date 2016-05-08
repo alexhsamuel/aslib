@@ -1,3 +1,7 @@
+# FIXME: Handle stdin.
+# FIXME: Handle KeyboardInterrupt correctly.
+# FIXME: Handle BrokenPipeError correctly.
+
 import asyncio
 from   contextlib import closing, suppress
 from   datetime import datetime
@@ -5,6 +9,7 @@ import re
 import resource
 from   subprocess import PIPE
 import sys
+import time
 
 from   pln.terminal import ansi, get_size
 
@@ -25,6 +30,8 @@ col = 0
 last_timestamp = None
 
 TIME_STYLE = ansi.style(fg="light_gray")
+EXIT_STYLE = ansi.style(fg="light_gray")
+USAGE_STYLE = ansi.style(fg="#80c0ff")
 
 def show(text, style=None):
     global col
@@ -81,11 +88,26 @@ async def run_command(loop, argv):
 
 def main():
     with closing(asyncio.get_event_loop()) as loop:
+        start = time.monotonic()
         try:
             result = loop.run_until_complete(run_command(loop, sys.argv[1 :]))
         except KeyboardInterrupt:
             result = KEYBOARD_INTERRUPT_EXIT_STATUS
-        raise SystemExit(result)
+        end = time.monotonic()
+
+    usage = resource.getrusage(resource.RUSAGE_CHILDREN)
+    write(" ".join(
+        EXIT_STYLE(l + ": ") + USAGE_STYLE(v)
+        for l, v in (
+                ("status", str(result)),
+                ("real", format(end - start, ".3f")),
+                ("user", format(usage.ru_utime, ".3f")),
+                ("sys", format(usage.ru_stime, ".3f")),
+                ("RSS", format(usage.ru_maxrss / 1024**2, ".0f") + "M"),
+        )
+    ) + "\n")
+
+    raise SystemExit(result)
 
 
 if __name__ == "__main__":
