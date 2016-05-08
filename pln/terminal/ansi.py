@@ -16,6 +16,17 @@ import re
 ESC = "\x1b"
 CSI = ESC + "["
 
+def csi(*parts):
+    return CSI + "".join( str(p) for p in parts )
+
+
+def to_column(col):
+    """
+    Moves the cursor to (zero-indexed) `col`.
+    """
+    return csi(col + 1, "G")
+
+
 def SGR(*codes):
     assert all( isinstance(c, int) for c in codes )
     return CSI + ";".join( str(c) for c in codes ) + "m"
