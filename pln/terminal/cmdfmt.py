@@ -1,5 +1,5 @@
 import asyncio
-from   contextlib import closing
+from   contextlib import closing, suppress
 from   datetime import datetime
 import re
 import resource
@@ -9,6 +9,9 @@ import sys
 from   pln.terminal import ansi, get_size
 
 #-------------------------------------------------------------------------------
+
+# Because that's what the shell does.  (?)
+KEYBOARD_INTERRUPT_EXIT_STATUS = 130
 
 # FIXME
 def go_to_column(col):
@@ -50,19 +53,14 @@ def show(text, style=None):
     
 
 async def format_output(stream, style):
-    try:
-        while True:
-            # Wait for some output to be available.
-            output = await stream.read(1)
-            if len(output) == 0:
-                break
-            # Read whatever's available in the buffer.
-            output += await stream.read(len(stream._buffer))
-            show(output.decode(), style)
-    except BrokenPipeError:
-        # FIXME: What to do?  We need to close the pipes and cancel the other
-        # coro.
-        raise
+    while True:
+        # Wait for some output to be available.
+        output = await stream.read(1)
+        if len(output) == 0:
+            break
+        # Read whatever's available in the buffer.
+        output += await stream.read(len(stream._buffer))
+        show(output.decode(), style)
 
 
 async def run_command(loop, argv):
@@ -76,15 +74,17 @@ async def run_command(loop, argv):
         result, *_ = await asyncio.gather(proc.wait(), stdout, stderr)
     except KeyboardInterrupt:
         show("\n")
-        # Because that's what the shell does.  (?)
-        return 130
+        return KEYBOARD_INTERRUPT_EXIT_STATUS
     else:
         return result
 
 
 def main():
     with closing(asyncio.get_event_loop()) as loop:
-        result = loop.run_until_complete(run_command(loop, sys.argv[1 :]))
+        try:
+            result = loop.run_until_complete(run_command(loop, sys.argv[1 :]))
+        except KeyboardInterrupt:
+            result = KEYBOARD_INTERRUPT_EXIT_STATUS
         raise SystemExit(result)
 
 
