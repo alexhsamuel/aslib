@@ -7,20 +7,29 @@ from   contextlib import closing, suppress
 from   datetime import datetime
 import re
 import resource
+from   signal import Signals
 from   subprocess import PIPE
 import sys
 import time
 
-from   pln.terminal import ansi, get_size
+from   . import ansi, get_size
 
 #-------------------------------------------------------------------------------
 
-# Because that's what the shell does.  (?)
-KEYBOARD_INTERRUPT_EXIT_STATUS = 130
+KEYBOARD_INTERRUPT_EXIT_STATUS = -Signals.SIGINT
 
-TIME_STYLE  = ansi.style(fg="light_gray")
-EXIT_STYLE  = ansi.style(fg="light_gray")
-USAGE_STYLE = ansi.style(fg="#80c0ff")
+STDOUT_STYLE    = None
+STDERR_STYLE    = ansi.style(fg="#400000")
+TIME_STYLE      = ansi.style(fg="light_gray")
+EXIT_STYLE      = ansi.style(fg="light_gray")
+USAGE_STYLE     = ansi.style(fg="#80c0ff")
+
+def get_signal_name(signum):
+    try:
+        return Signals(signum).name
+    except ValueError:
+        return "SIG???"
+
 
 # Our own output goes to stdout.
 write = sys.stdout.write
@@ -81,8 +90,8 @@ async def run_command(loop, argv):
     proc = await asyncio.create_subprocess_exec(
         *argv, loop=loop, stdout=PIPE, stderr=PIPE)
 
-    stdout = format_output(proc.stdout, None)
-    stderr = format_output(proc.stderr, ansi.style(fg="#400000"))
+    stdout = format_output(proc.stdout, STDOUT_STYLE)
+    stderr = format_output(proc.stderr, STDERR_STYLE)
 
     try:
         result, *_ = await asyncio.gather(proc.wait(), stdout, stderr)
@@ -102,11 +111,18 @@ def main():
             result = KEYBOARD_INTERRUPT_EXIT_STATUS
         end = time.monotonic()
 
+    if col != 0:
+        write("\n")
     usage = resource.getrusage(resource.RUSAGE_CHILDREN)
+    write(
+        EXIT_STYLE("exit: ")
+        + (USAGE_STYLE("0") if result == 0
+           else STDERR_STYLE(str(result)) if result > 0 
+           else STDERR_STYLE(get_signal_name(-result)))
+        + " ")
     write(" ".join(
         EXIT_STYLE(l + ": ") + USAGE_STYLE(v)
         for l, v in (
-                ("status", str(result)),
                 ("real", format(end - start, ".3f")),
                 ("user", format(usage.ru_utime, ".3f")),
                 ("sys", format(usage.ru_stime, ".3f")),
