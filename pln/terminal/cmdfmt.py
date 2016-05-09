@@ -1,3 +1,22 @@
+"""
+Usage: {} [ Options ] PROGRAM [ ARG ... ]
+
+Runs PROGRAM with ARGs and enhances the output.
+
+  - Input to stdin is shown in boldface.
+  - Output to stderr is shown in red.
+  - Timestamps are shown for lines of output, at the right. 
+  - The exit status and basic resource usage are shown on termination.
+
+Note that the program will not work correctly if PROGRAM outputs ANSI escape
+sequences, or otherwises uses the terminal in nontrivial ways.
+
+Options:
+  -h --help     Print usage information and exit.
+"""
+
+#-------------------------------------------------------------------------------
+
 # FIXME: Handle stdin.
 # FIXME: Trim or wrap long lines.
 # FIXME: Handle KeyboardInterrupt correctly.
@@ -6,6 +25,7 @@
 import asyncio
 from   contextlib import closing, suppress
 from   datetime import datetime
+import os
 import re
 import resource
 from   signal import Signals
@@ -56,25 +76,22 @@ def show_time(time):
         last_timestamp = timestamp
     
 
-def show(text, fg):
+def show(text, time, fg):
     global col
     global last_timestamp
 
-    time = datetime.now()
-
-    # Set the color, and turn off bold.
-    write(ansi.sgr(fg=fg, bold=False))
-
-    for line in re.split("(\n)", text):
+    for line in re.split(r"(\n)", text):
         if line == "":
             pass
         elif line == "\n":
             col = 0
-            write("\n".format(col))
+            write("\n")
         else:
             assert "\n" not in line
+            # Set the color, and turn off bold.
+            write(ansi.sgr(fg=fg, bold=False))
             write(line)
-            col += len(text) 
+            col += len(line) 
             show_time(time)
 
     # Disable the color, and reenable bold for stdin.
@@ -89,9 +106,12 @@ async def format_output(stream, fg):
         output = await stream.read(1)
         if len(output) == 0:
             break
+        time = datetime.now()
         # Read whatever's available in the buffer.
-        output += await stream.read(len(stream._buffer))
-        show(output.decode(), fg)
+        buf_len = len(stream._buffer)
+        if buf_len > 0:
+            output += await stream.read(buf_len)
+        show(output.decode(), time, fg)
 
 
 async def run_command(loop, argv):
@@ -154,7 +174,21 @@ def run(argv):
 
 
 def main():
-    run(sys.argv[1 :])
+    # We don't use argparse, as we want to accept optional arguments only
+    # at the beginning of argv.
+    argv = list(sys.argv)
+    this_prog = os.path.basename(argv.pop(0))
+    while len(argv) > 0 and argv[0].startswith("-"):
+        arg = argv.pop(0)
+        if arg in ("-h", "--help"):
+            print(__doc__.format(this_prog))
+            raise SystemExit(0)
+        else:
+            print("Unknown option: {}\n".format(arg), file=sys.stderr)
+            print(__doc__.format(this_prog), file=sys.stderr)
+            raise SystemExit(2)
+
+    run(argv)
 
 
 if __name__ == "__main__":
