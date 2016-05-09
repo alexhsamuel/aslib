@@ -19,10 +19,10 @@ from   . import ansi, get_size
 
 KEYBOARD_INTERRUPT_EXIT_STATUS = -Signals.SIGINT
 
-STDOUT_STYLE    = None
-STDERR_STYLE    = ansi.style(fg="#400000")
-TIME_STYLE      = ansi.style(fg="light_gray")
-EXIT_STYLE      = ansi.style(fg="light_gray")
+STDERR_COLOR    = "#800000"
+TIME_STYLE      = ansi.style(fg="gray50")
+EXIT_STYLE      = ansi.style(fg="gray50")
+ERROR_STYLE     = ansi.style(fg="#800000")
 USAGE_STYLE     = ansi.style(fg="#80c0ff")
 
 def get_signal_name(signum):
@@ -34,6 +34,7 @@ def get_signal_name(signum):
 
 # Our own output goes to stdout.
 write = sys.stdout.write
+flush = sys.stdout.flush
 
 # The terminal width.
 width, _    = get_size()  # FIXME: Should be dynamic.
@@ -55,11 +56,14 @@ def show_time(time):
         last_timestamp = timestamp
     
 
-def show(text, style=None):
+def show(text, fg):
     global col
     global last_timestamp
 
     time = datetime.now()
+
+    # Set the color, and turn off bold.
+    write(ansi.sgr(fg=fg, bold=False))
 
     for line in re.split("(\n)", text):
         if line == "":
@@ -69,14 +73,27 @@ def show(text, style=None):
             write("\n".format(col))
         else:
             assert "\n" not in line
-            write(line if style is None else style(line))
+            write(line)
             col += len(text) 
             show_time(time)
 
-    sys.stdout.flush()
-    
+    # Disable the color, and reenable bold for stdin.
+    write(ansi.sgr(fg="default", bold=True))
 
-async def format_output(stream, style):
+    flush()
+
+
+# async def format_input(in_stream, out_stream):
+#     while True:
+#         # Wait for some input to be available.
+#         input = await in_stream.readline()
+#         if len(input) == 0:
+#             out_stream.close()
+#             break
+#         out_stream.write(input)
+
+
+async def format_output(stream, fg):
     while True:
         # Wait for some output to be available.
         output = await stream.read(1)
@@ -84,15 +101,21 @@ async def format_output(stream, style):
             break
         # Read whatever's available in the buffer.
         output += await stream.read(len(stream._buffer))
-        show(output.decode(), style)
+        show(output.decode(), fg)
 
 
 async def run_command(loop, argv):
+    # Hook up stdin to a stream.
+    # stdin = asyncio.StreamReader()
+    # stdin_proto = asyncio.StreamReaderProtocol(stdin)
+    # await loop.connect_read_pipe(lambda: stdin_proto, sys.stdin)
+
     proc = await asyncio.create_subprocess_exec(
         *argv, loop=loop, stdout=PIPE, stderr=PIPE)
 
-    stdout = format_output(proc.stdout, STDOUT_STYLE)
-    stderr = format_output(proc.stderr, STDERR_STYLE)
+#     stdin  = format_input(stdin, proc.stdin)
+    stdout = format_output(proc.stdout, None)
+    stderr = format_output(proc.stderr, STDERR_COLOR)
 
     try:
         result, *_ = await asyncio.gather(proc.wait(), stdout, stderr)
@@ -103,38 +126,51 @@ async def run_command(loop, argv):
         return result
 
 
+def run(argv):
+    # Reset the terminal, and set it to bold to style stdin.
+    write(ansi.NORMAL + ansi.BOLD)
+    flush()
+
+    try:
+        with closing(asyncio.get_event_loop()) as loop:
+            start = time.monotonic()
+            try:
+                exit = loop.run_until_complete(run_command(loop, argv))
+            except KeyboardInterrupt:
+                exit = KEYBOARD_INTERRUPT_EXIT_STATUS
+            end = time.monotonic()
+
+        usage = resource.getrusage(resource.RUSAGE_CHILDREN)
+
+        write(ansi.NORMAL_INTENSITY)
+        if col != 0:
+            write("\n")
+        # Show the exit status.
+        write(
+            EXIT_STYLE("exit: ")
+            + (USAGE_STYLE("0") if exit == 0
+               else ERROR_STYLE(str(exit)) if exit > 0 
+               else ERROR_STYLE(get_signal_name(-exit)))
+            + " ")
+        # Show resource usage.
+        write(" ".join(
+            EXIT_STYLE(l + ": ") + USAGE_STYLE(v)
+            for l, v in (
+                    ("real", format(end - start, ".3f")),
+                    ("user", format(usage.ru_utime, ".3f")),
+                    ("sys", format(usage.ru_stime, ".3f")),
+                    ("RSS", format(usage.ru_maxrss / 1024**2, ".0f") + "M"),
+            )
+        ) + "\n")
+
+        raise SystemExit(exit)
+
+    finally:
+        write(ansi.RESET)
+
+
 def main():
-    with closing(asyncio.get_event_loop()) as loop:
-        start = time.monotonic()
-        try:
-            exit = loop.run_until_complete(run_command(loop, sys.argv[1 :]))
-        except KeyboardInterrupt:
-            exit = KEYBOARD_INTERRUPT_EXIT_STATUS
-        end = time.monotonic()
-
-    usage = resource.getrusage(resource.RUSAGE_CHILDREN)
-
-    if col != 0:
-        write("\n")
-    # Show the exit status.
-    write(
-        EXIT_STYLE("exit: ")
-        + (USAGE_STYLE("0") if exit == 0
-           else STDERR_STYLE(str(exit)) if exit > 0 
-           else STDERR_STYLE(get_signal_name(-exit)))
-        + " ")
-    # Show resource usage.
-    write(" ".join(
-        EXIT_STYLE(l + ": ") + USAGE_STYLE(v)
-        for l, v in (
-                ("real", format(end - start, ".3f")),
-                ("user", format(usage.ru_utime, ".3f")),
-                ("sys", format(usage.ru_stime, ".3f")),
-                ("RSS", format(usage.ru_maxrss / 1024**2, ".0f") + "M"),
-        )
-    ) + "\n")
-
-    raise SystemExit(exit)
+    run(sys.argv[1 :])
 
 
 if __name__ == "__main__":
