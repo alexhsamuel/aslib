@@ -23,7 +23,7 @@ STDERR_COLOR    = "#800000"
 TIME_STYLE      = ansi.style(fg="gray50")
 EXIT_STYLE      = ansi.style(fg="gray50")
 ERROR_STYLE     = ansi.style(fg="#800000")
-USAGE_STYLE     = ansi.style(fg="#80c0ff")
+USAGE_STYLE     = ansi.style(fg="#0055aa")
 
 def get_signal_name(signum):
     try:
