@@ -83,16 +83,6 @@ def show(text, fg):
     flush()
 
 
-# async def format_input(in_stream, out_stream):
-#     while True:
-#         # Wait for some input to be available.
-#         input = await in_stream.readline()
-#         if len(input) == 0:
-#             out_stream.close()
-#             break
-#         out_stream.write(input)
-
-
 async def format_output(stream, fg):
     while True:
         # Wait for some output to be available.
@@ -105,15 +95,9 @@ async def format_output(stream, fg):
 
 
 async def run_command(loop, argv):
-    # Hook up stdin to a stream.
-    # stdin = asyncio.StreamReader()
-    # stdin_proto = asyncio.StreamReaderProtocol(stdin)
-    # await loop.connect_read_pipe(lambda: stdin_proto, sys.stdin)
-
     proc = await asyncio.create_subprocess_exec(
         *argv, loop=loop, stdout=PIPE, stderr=PIPE)
 
-#     stdin  = format_input(stdin, proc.stdin)
     stdout = format_output(proc.stdout, None)
     stderr = format_output(proc.stderr, STDERR_COLOR)
 
