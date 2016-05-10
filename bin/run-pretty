@@ -19,7 +19,6 @@ Options:
 
 #-------------------------------------------------------------------------------
 
-# FIXME: Handle stdin.
 # FIXME: Trim or wrap long lines.
 # FIXME: Handle KeyboardInterrupt correctly.
 # FIXME: Handle BrokenPipeError correctly.
