@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 """
 Usage: {} [ Options ] PROGRAM [ ARG ... ]
 
@@ -33,7 +35,7 @@ from   subprocess import PIPE
 import sys
 import time
 
-from   . import ansi, get_size
+from   pln.terminal import ansi, get_size
 
 #-------------------------------------------------------------------------------
 
