@@ -14,7 +14,8 @@ Note that the program will not work correctly if PROGRAM outputs ANSI escape
 sequences, or otherwises uses the terminal in nontrivial ways.
 
 Options:
-  -h --help     Print usage information and exit.
+  -h --help         Print usage information and exit.
+  -t --truncate     Truncate long lines instead of wrapping.
 """
 
 #-------------------------------------------------------------------------------
@@ -22,6 +23,7 @@ Options:
 # FIXME: Trim or wrap long lines.
 # FIXME: Handle KeyboardInterrupt correctly.
 # FIXME: Handle BrokenPipeError correctly.
+# FIXME: Handle escape sequences in stdout and stderr.
 
 import asyncio
 from   contextlib import closing, suppress
@@ -38,6 +40,22 @@ from   pln.terminal import ansi, get_size
 
 #-------------------------------------------------------------------------------
 
+def get_signal_name(signum):
+    try:
+        return Signals(signum).name
+    except ValueError:
+        return "SIG???"
+
+
+if sys.platform == "linux":
+    MAX_RSS_UNITS = 1024
+elif sys.platform == "darwin":
+    MAX_RSS_UNITS = 1
+else:
+    raise NotImplementedError("no MAX_RSS_UNITS for {}".format(sys.platform))
+
+#-------------------------------------------------------------------------------
+
 KEYBOARD_INTERRUPT_EXIT_STATUS = -Signals.SIGINT
 
 STDERR_COLOR    = "#800000"
@@ -46,12 +64,8 @@ EXIT_STYLE      = ansi.style(fg="gray50")
 ERROR_STYLE     = ansi.style(fg="#800000")
 USAGE_STYLE     = ansi.style(fg="#0055aa")
 
-def get_signal_name(signum):
-    try:
-        return Signals(signum).name
-    except ValueError:
-        return "SIG???"
-
+# Length in characters of a line timestamp.
+TIMESTAMP_LEN   = 12
 
 # Our own output goes to stdout.
 write = sys.stdout.write
@@ -59,27 +73,36 @@ flush = sys.stdout.flush
 
 # The terminal width.
 width, _    = get_size()  # FIXME: Should be dynamic.
+# Printing \b doesn't work correctly if we wrap the terminal.
+width -= 1
 
 # The current column.
 col         = 0
+# If true, truncate lines instead of wrapping.
+truncate    = False
 
 last_timestamp = None
 
 def show_time(time):
     global last_timestamp
 
-    timestamp = " " + format(time, "%H:%M:%S.%f")[: -3]
+    timestamp = format(time, "%H:%M:%S.%f")[: -3]
+    assert len(timestamp) == TIMESTAMP_LEN
 
     if timestamp != last_timestamp:
-        write(ansi.to_column(width - len(timestamp)))
+        # write(ansi.to_column(width - len(timestamp)))
+        write(" " * (width - col - TIMESTAMP_LEN))
         write(TIME_STYLE(timestamp))
-        write(ansi.to_column(col))
+        # write(ansi.to_column(col))
+        write("\b" * (width - col))
         last_timestamp = timestamp
     
 
 def show(text, time, fg):
     global col
     global last_timestamp
+
+    max_col = width - TIMESTAMP_LEN - 1
 
     for line in re.split(r"(\n)", text):
         if line == "":
@@ -91,10 +114,24 @@ def show(text, time, fg):
             assert "\n" not in line
             # Set the color, and turn off bold.
             write(ansi.sgr(fg=fg, bold=False))
-            write(line)
-            col += len(line) 
+
+            this = line[: max_col - col]
+            line = line[max_col - col :]
+            col += write(this)
+
+            if truncate and len(line) > 0:
+                write(TIME_STYLE("\u2026"))
+                line = ""
+
             show_time(time)
 
+            while len(line) > 0:
+                write(TIME_STYLE("\u21b5\n"))
+                this = line[: max_col]
+                line = line[max_col :]
+                col = write(this)
+                show_time(time)
+                
     # Disable the color, and reenable bold for stdin.
     write(ansi.sgr(fg="default", bold=True))
 
@@ -146,6 +183,7 @@ def run(argv):
             end = time.monotonic()
 
         usage = resource.getrusage(resource.RUSAGE_CHILDREN)
+        maxrss = usage.ru_maxrss * MAX_RSS_UNITS
 
         write(ansi.NORMAL_INTENSITY)
         if col != 0:
@@ -164,7 +202,7 @@ def run(argv):
                     ("real", format(end - start, ".3f")),
                     ("user", format(usage.ru_utime, ".3f")),
                     ("sys", format(usage.ru_stime, ".3f")),
-                    ("RSS", format(usage.ru_maxrss / 1024**2, ".0f") + "M"),
+                    ("RSS", format(maxrss / 1024**2, ".0f") + "M"),
             )
         ) + "\n")
 
@@ -174,20 +212,33 @@ def run(argv):
         write(ansi.RESET)
 
 
+#-------------------------------------------------------------------------------
+
+def exit_usage(error=None):
+    out = sys.stdout if error is None else sys.stderr
+    if error is not None:
+        print(error, file=out)
+    this_prog = os.path.basename(sys.argv[0])
+    print(__doc__.format(this_prog), file=out)
+    raise SystemExit(os.EX_USAGE if error is None else os.EX_OK)
+
+
 def main():
+    global truncate
+
     # We don't use argparse, as we want to accept optional arguments only
     # at the beginning of argv.
-    argv = list(sys.argv)
-    this_prog = os.path.basename(argv.pop(0))
+    argv = sys.argv[1 :]
     while len(argv) > 0 and argv[0].startswith("-"):
         arg = argv.pop(0)
         if arg in ("-h", "--help"):
-            print(__doc__.format(this_prog))
-            raise SystemExit(0)
+            exit_usage()
+        elif arg in ("-t", "--truncate"):
+            truncate = True
         else:
-            print("Unknown option: {}\n".format(arg), file=sys.stderr)
-            print(__doc__.format(this_prog), file=sys.stderr)
-            raise SystemExit(2)
+            exit_usage("Unknown option: {}\n".format(arg))
+    if len(argv) < 1:
+        exit_usage("no PROGRAM given")
 
     run(argv)
 
