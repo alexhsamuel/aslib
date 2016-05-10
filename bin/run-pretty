@@ -20,7 +20,6 @@ Options:
 
 #-------------------------------------------------------------------------------
 
-# FIXME: Trim or wrap long lines.
 # FIXME: Handle KeyboardInterrupt correctly.
 # FIXME: Handle BrokenPipeError correctly.
 # FIXME: Handle escape sequences in stdout and stderr.
