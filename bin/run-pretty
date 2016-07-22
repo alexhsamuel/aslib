@@ -35,7 +35,7 @@ from   subprocess import PIPE
 import sys
 import time
 
-from   pln.terminal import ansi, get_size
+from   aslib.terminal import ansi, get_size
 
 #-------------------------------------------------------------------------------
 
