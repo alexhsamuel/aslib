@@ -139,7 +139,7 @@ def _time(fn, count):
     return (perf_counter() - start) / count
 
 
-def _estimate_time(fn, *, min_time=MSEC):
+def _estimate_time(fn, *, min_time=USEC):
     """
     Estimates the time to invoke `fn()`.
     """
@@ -156,17 +156,17 @@ def _estimate_time(fn, *, min_time=MSEC):
             count *= 10
 
 
-def _time_it(fn, *, trials=10, count=None, target=1.0, warm_up=1):
+def _time_it(fn, *, samples=10, count=1):
     """
     Times callable `fn`.
 
-    @param trials
-      Number of trials.
+    @param samples
+      Number of samples.
     @param count
       Number of invocations per trial, or `None` to choose automatically
       based on `target`.
     @param target
-      Approximate total time in seconds for all trials, used to choose `count` 
+      Approximate total time in seconds for all samples, used to choose `count` 
       automatically.
     @param warm_up
       Number of times to invoke `fn` as a warm-up before timing.
@@ -174,25 +174,33 @@ def _time_it(fn, *, trials=10, count=None, target=1.0, warm_up=1):
       Generator of trial times.  Each time is the total time for the trial
       divided by the number of invocations per trial.
     """
-    # Do some un-timed warm up calls.
-    for _ in range(warm_up):
-        fn()
-
-    if count is None:
-        time_estimate = _estimate_time(fn)
-        count = max(1, round(target / trials / time_estimate))
-
-    return ( _time(fn, count) for _ in range(trials) )
+    return ( _time(fn, count) for _ in range(samples) )
 
     
-def time_it(fn, **kw_args):
+def timer(samples=100, warm_up=1, min_sample_time=10 * USEC):
     """
-    Times callable `fn`.
+    Creates a timer.
+    """
+    def time(fn, *args, **kw_args):
+        call = lambda: fn(*args, **kw_args)
 
-    @return
-      Summary statistics of timing trials.
-    """
-    from .stats import get_stats
-    return get_stats(_time_it(fn, **kw_args))
+        # Do some un-timed warm up calls.
+        for _ in range(warm_up):
+            call()
+
+        time_estimate = _estimate_time(call)
+        count = max(1, round(min_sample_time / time_estimate))
+
+        times = sorted(_time_it(call, samples=samples, count=count))
+        time = times[len(times) // 10]
+
+        return {
+            "name"      : fn.__name__,
+            "time"      : time,
+            "samples"   : samples,
+            "count"     : count,
+        }
+
+    return time
 
 
