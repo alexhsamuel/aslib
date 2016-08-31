@@ -9,9 +9,9 @@ import sys
 from   . import ansi
 from   .printer import Printer, NL
 from   ..text import get_common_indent
-import pln.log
+import aslib.log
 
-log = pln.log.get()
+log = aslib.log.get()
 
 #-------------------------------------------------------------------------------
 

@@ -8,7 +8,7 @@ a number of dubious bits of syntactic sugar to make the formatting code concise.
 
 For example::
 
-  from pln.terminal.printer import Printer, NL
+  from aslib.terminal.printer import Printer, NL
   printer = Printer()
 
   # Print a message.
