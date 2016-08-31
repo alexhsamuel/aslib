@@ -17,6 +17,10 @@ def _ints(value, shape):
         return result
 
 
+def cumsum(gen):
+    return lambda n: gen(n).cumsum()
+
+
 def normal(mu=0, sigma=1):
     return partial(np.random.normal, mu, sigma)
 
