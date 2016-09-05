@@ -393,13 +393,14 @@ class Frame:
             self._width = width + 2 * string_length(pad)
             
 
-    def __init__(self, cols, edge=SINGLE):
+    def __init__(self, cols, edge=SINGLE, style=None):
         cols = py.tupleize(cols)
         if not py.is_seq(edge):
             edge = (edge, ) * 4
 
         self.cols = cols
         self.edge = edge
+        self.style = py.idem if style is None else style
         self.__width = (
               sum( c._width for c in cols ) 
             + sum( c.sep is not None for c in cols[1 :] )
@@ -425,7 +426,7 @@ class Frame:
             if r is not None:
                 # Upper right.
                 parts.append(get(0, 0, r, t))
-            return "".join(parts)
+            return self.style("".join(parts))
 
 
     def line(self, style):
@@ -444,7 +445,7 @@ class Frame:
         if r is not None:
             # Right.
             parts.append(get(r, 0, r, style))
-        return "".join(parts)
+        return self.style("".join(parts))
 
 
     def row(self, values):
@@ -456,11 +457,11 @@ class Frame:
         parts = []
         if l is not None:
             # Left.
-            parts.append(get(l, 0, l, 0))
+            parts.append(self.style(get(l, 0, l, 0)))
         for i, (col, val) in enumerate(zip(self.cols, values)):
             if i > 0 and col.sep is not None:
                 # Column separator.
-                parts.append(get(col.sep, 0, col.sep, 0))
+                parts.append(self.style(get(col.sep, 0, col.sep, 0)))
             # Contents.
             if string_length(val) != col.width:
                 raise ValueError(
@@ -469,7 +470,7 @@ class Frame:
             parts.append(col.pad + val + col.pad)
         if r is not None:
             # Right.
-            parts.append(get(r, 0, r, 0))
+            parts.append(self.style(get(r, 0, r, 0)))
         return "".join(parts)
 
 
@@ -492,6 +493,6 @@ class Frame:
             if r is not None:
                 # Lower right.
                 parts.append(get(r, 0, 0, b))
-            return "".join(parts)
+            return self.style("".join(parts))
 
 
