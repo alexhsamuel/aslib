@@ -8,6 +8,7 @@ import functools
 
 __all__ = [
     "memoize",
+    "memoize_method",
     "memoize_with",
 ]
 
