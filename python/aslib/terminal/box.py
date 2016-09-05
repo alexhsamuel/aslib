@@ -308,7 +308,7 @@ def get(t, r, b, l):
     return _BOX_CHARS[t << 6 | r << 4 | b << 2 | l]
 
 
-# Fill in missing combinations with approximate matches.
+# Fill in missing combinations with approximate matches at import time.
 
 def _fill_in_missing(t, r, b, l):
     def get(t, r, b, l):
