@@ -35,7 +35,7 @@ HEAVY   = 3
 #
 # See https://en.wikipedia.org/wiki/Box-drawing_character.
 
-_BOX_CHARS = (
+_RAW_BOX_CHARS = (
     " "       , #     
     "\u2574"  , #    -
     None      , #    =
@@ -305,25 +305,45 @@ def get(t, r, b, l):
       The box drawing character, or an approximate substitute if none is
       available.
     """
-    char = _BOX_CHARS[t << 6 | r << 4 | b << 2 | l]
-    if char is None:
-        # Missing character.  Degrade heavy to single.
-        if t == HEAVY: t = SINGLE
-        if r == HEAVY: r = SINGLE
-        if b == HEAVY: b = SINGLE
-        if l == HEAVY: l = SINGLE
-        char = _BOX_CHARS[t << 6 | r << 4 | b << 2 | l]
-        if char is None:
-            # Still missing.  Degrade double to single.
-            if t == DOUBLE: t = SINGLE
-            if r == DOUBLE: r = SINGLE
-            if b == DOUBLE: b = SINGLE
-            if l == DOUBLE: l = SINGLE
-            char = _BOX_CHARS[t << 6 | r << 4 | b << 2 | l]
-            # All permutations of EMPTY and SINGLE are available.
-            assert char is not None
-    return char
+    return _BOX_CHARS[t << 6 | r << 4 | b << 2 | l]
 
+
+# Fill in missing combinations with approximate matches.
+
+def _fill_in_missing(t, r, b, l):
+    def get(t, r, b, l):
+        return _RAW_BOX_CHARS[t << 6 | r << 4 | b << 2 | l]
+
+    char = get(t, r, b, l)
+    if char is not None: 
+        return char
+
+    # Missing character.  Degrade HEAVY to SINGLE.
+    if t == HEAVY: t = SINGLE
+    if r == HEAVY: r = SINGLE
+    if b == HEAVY: b = SINGLE
+    if l == HEAVY: l = SINGLE
+    char = get(t, r, b, l)
+    if char is not None: 
+        return char
+
+    # Still missing.  Degrade DOUBLE to SINGLE.
+    if t == DOUBLE: t = SINGLE
+    if r == DOUBLE: r = SINGLE
+    if b == DOUBLE: b = SINGLE
+    if l == DOUBLE: l = SINGLE
+    char = get(t, r, b, l)
+    # All permutations of EMPTY and SINGLE are available.
+    assert char is not None
+    return char
+        
+_BOX_CHARS = tuple(
+    _fill_in_missing(t, r, b, l)
+    for t, r, b, l in itr.product((EMPTY, SINGLE, DOUBLE, HEAVY), repeat=4)
+)
+
+
+#-------------------------------------------------------------------------------
 
 def expand(dirs):
     """
@@ -395,8 +415,7 @@ class Frame:
 
     def __init__(self, cols, edge=SINGLE, style=None):
         cols = py.tupleize(cols)
-        if not py.is_seq(edge):
-            edge = (edge, ) * 4
+        edge = expand(edge)
 
         self.cols = cols
         self.edge = edge
