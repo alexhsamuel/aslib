@@ -6,7 +6,10 @@ See also https://github.com/Robpol86/terminaltables.
 
 #-------------------------------------------------------------------------------
 
-from   .. import py
+from   .. import itr, py
+
+# FIXME!
+from   fixfmt import string_length
 
 #-------------------------------------------------------------------------------
 
@@ -379,19 +382,15 @@ def box(width, height, sides=SINGLE):
 
 #-------------------------------------------------------------------------------
 
-# FIXME: Not done yet.
 class Frame:
 
     class Column:
 
         def __init__(self, width, sep=SINGLE, pad=" "):
-            if isinstance(pad, str): 
-                pad = (pad, pad)
-            assert len(pad) == 2
-
             self.width = width
             self.sep = sep
             self.pad = pad
+            self._width = width + 2 * string_length(pad)
             
 
     def __init__(self, cols, edge=SINGLE):
@@ -401,22 +400,98 @@ class Frame:
 
         self.cols = cols
         self.edge = edge
+        self.__width = (
+              sum( c._width for c in cols ) 
+            + sum( c.sep is not None for c in cols[1 :] )
+        )
 
 
-    @property
     def top(self):
-        edge = self.edge[TOP]
-        if edge is None:
+        t, r, _, l = self.edge
+        if t is None:
             return None
+        else:
+            parts = []
+            line = get(0, t, 0, t)
+            if l is not None:
+                # Upper left.
+                parts.append(get(0, t, l, 0))
+            for first, col in itr.first(self.cols):
+                if not first and col.sep is not None:
+                    # Column separator.
+                    parts.append(get(0, t, col.sep, t))
+                # Line.
+                parts.append(line * col._width)
+            if r is not None:
+                # Upper right.
+                parts.append(get(0, 0, r, t))
+            return "".join(parts)
 
+
+    def line(self, style):
+        _, r, _, l = self.edge
         parts = []
+        line = get(0, style, 0, style)
+        if l is not None:
+            # Left.
+            parts.append(get(l, style, l, 0))
+        for first, col in itr.first(self.cols):
+            if not first and col.sep is not None:
+                # Column separator.
+                parts.append(get(col.sep, style, col.sep, style))
+            # Line.
+            parts.append(line * col._width)
+        if r is not None:
+            # Right.
+            parts.append(get(r, 0, r, style))
+        return "".join(parts)
 
-        left = self.edge[LEFT]
-        if left is not None:
-            pass
+
+    def row(self, values):
+        if len(values) != len(self.cols):
+            raise ValueError(
+                "wrong number of values; expected {}".format(len(self.cols)))
+
+        _, r, _, l = self.edge
+        parts = []
+        if l is not None:
+            # Left.
+            parts.append(get(l, 0, l, 0))
+        for i, (col, val) in enumerate(zip(self.cols, values)):
+            if i > 0 and col.sep is not None:
+                # Column separator.
+                parts.append(get(col.sep, 0, col.sep, 0))
+            # Contents.
+            if string_length(val) != col.width:
+                raise ValueError(
+                    "wrong length for value in position {}; expected {}"
+                    .format(i, col.width))
+            parts.append(col.pad + val + col.pad)
+        if r is not None:
+            # Right.
+            parts.append(get(r, 0, r, 0))
+        return "".join(parts)
 
 
+    def bottom(self):
+        _, r, b, l = self.edge
+        if b is None:
+            return None
+        else:
+            parts = []
+            line = get(0, b, 0, b)
+            if l is not None:
+                # Lower left.
+                parts.append(get(l, b, 0, 0))
+            for first, col in itr.first(self.cols):
+                if not first and col.sep is not None:
+                    # Column separator.
+                    parts.append(get(col.sep, b, 0, b))
+                # Line.
+                parts.append(line * col._width)
+            if r is not None:
+                # Lower right.
+                parts.append(get(r, 0, 0, b))
+            return "".join(parts)
 
 
-            
-        
