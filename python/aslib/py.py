@@ -30,6 +30,18 @@ def idem(obj):
     return obj
 
 
+def is_seq(obj):
+    """
+    Returns true if `obj` is a non-string sequence.
+    """
+    try:
+        len(obj)
+    except (TypeError, ValueError):
+        return False
+    else:
+        return not isinstance(obj, str)
+
+
 def tupleize(obj):
     """
     Converts into or wraps in a tuple.
