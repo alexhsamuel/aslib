@@ -317,9 +317,8 @@ def get(t, r, b, l):
             if b == DOUBLE: b = SINGLE
             if l == DOUBLE: l = SINGLE
             char = _BOX_CHARS[t << 6 | r << 4 | b << 2 | l]
-    # All permutations of EMPTY and SINGLE are available.
-    assert char is not None
-
+            # All permutations of EMPTY and SINGLE are available.
+            assert char is not None
     return char
 
 
