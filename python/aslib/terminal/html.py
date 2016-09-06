@@ -40,6 +40,7 @@ class Converter(html.parser.HTMLParser):
 
     ELEMENTS = {
         # Block elements
+        "div"   : ("", "", 1, 2, {}),
         "h1"    : ("", "\u272a ", 2, 1, {"bold": True, "underline": True}),
         "h2"    : ("", "\u2605 ", 2, 1, {"bold": True}),
         "h3"    : ("", "\u2734 ", 1, 1, {}),
@@ -59,7 +60,6 @@ class Converter(html.parser.HTMLParser):
     }
 
 
-    # FIXME: Suffix?  Or remove prefix?
     def __init__(self, printer):
         super().__init__(convert_charrefs=True)
 
@@ -69,8 +69,6 @@ class Converter(html.parser.HTMLParser):
         self.__hspace = False
         # Number of lines of vertical space required before the next word.
         self.__vspace = 0
-        # Prefix for the next word.
-        self.__prefix = None
         # True if we are in a <pre> element.
         self.__pre = False
 
@@ -213,7 +211,7 @@ def convert(html, *, style={}, width=sys.maxsize, **kw_args):
 # FIXME: For testing.
 
 if __name__ == "__main__":
-    with open("tmp/test0.html") as file:
+    with open(sys.argv[1]) as file:
         html = file.read()
     print(convert(html))
 
