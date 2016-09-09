@@ -78,14 +78,25 @@ def tupleize(obj):
             return (obj, )
 
 
-def format_call(__name, *args, **kw_args):
+def format_call(__fn, *args, **kw_args):
+    """
+    Formats a function call, with arguments, as a string.
+
+      >>> format_call(open, "data.csv", mode="r")
+      "open('data.csv', mode='r')"
+
+    @param __fn
+      The function to call, or its name.
+    @rtype
+       `str`
+    """
     try:
-        __name = __name.__name__
+        name = __fn.__name__
     except AttributeError:
-        __name = str(__name)
+        name = str(__fn)
     args = [ repr(a) for a in args ]
     args.extend( n + "=" + repr(v) for n, v in kw_args.items() )
-    return "{}({})".format(__name, ", ".join(args))
+    return "{}({})".format(name, ", ".join(args))
 
 
 def format_ctor(obj, *args, **kw_args):
