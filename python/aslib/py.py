@@ -78,14 +78,14 @@ def tupleize(obj):
             return (obj, )
 
 
-def format_call(name, *args, **kw_args):
+def format_call(__name, *args, **kw_args):
     try:
-        name = name.__name__
+        __name = __name.__name__
     except AttributeError:
-        name = str(name)
+        __name = str(__name)
     args = [ repr(a) for a in args ]
     args.extend( n + "=" + repr(v) for n, v in kw_args.items() )
-    return "{}({})".format(name, ", ".join(args))
+    return "{}({})".format(__name, ", ".join(args))
 
 
 def format_ctor(obj, *args, **kw_args):
