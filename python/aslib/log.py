@@ -1,6 +1,7 @@
 import functools
 import inspect
 import logging
+from   logging import DEBUG, INFO, WARN, WARNING, ERROR, CRITICAL
 
 from   . import itr
 from   . import py
@@ -11,6 +12,50 @@ from   . import py
 logging.basicConfig(
     format="%(asctime)s.%(msecs)03d [%(levelname)-7s] %(message)s",
     datefmt="%H:%M:%S")
+
+
+#-------------------------------------------------------------------------------
+
+LEVEL_NAMES = dict(
+    DEBUG   =DEBUG, 
+    INFO    =INFO, 
+    WARN    =WARN, 
+    WARING  =WARNING,
+    ERROR   =ERROR, 
+    CRITICAL=CRITICAL,
+)
+    
+
+def ensure_level(level):
+    try:
+        level = int(level)
+    except:
+        try:
+            level = LEVEL_NAMES[str(level).upper()]
+        except KeyError:
+            raise ValueError("not a log level: {}".format(level))
+    if 0 < level:
+        return level
+    else:
+        raise ValueError("invalid log level: {}".format(level))
+
+
+def add_option(parser):
+    """
+    Adds a logging command-line option to an `argparse.Parser`.
+    """
+    import argparse
+
+    class Action(argparse.Action):
+
+        def __call__(self, parser, namespace, value, option_string):
+            level = ensure_level(value)
+            logging.getLogger().setLevel(level)
+
+    parser.add_argument(
+        "--log", metavar="LEVEL", default="WARNING", action=Action,
+        help="set root logging level to LEVEL")
+    
 
 #-------------------------------------------------------------------------------
 
