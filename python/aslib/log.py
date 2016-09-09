@@ -1,7 +1,8 @@
 import functools
 import inspect
 import logging
-from   logging import DEBUG, INFO, WARN, WARNING, ERROR, CRITICAL
+from   logging import DEBUG, INFO, WARNING, ERROR, CRITICAL
+from   logging import debug, info, warning, error, critical
 
 from   . import itr
 from   . import py
@@ -19,7 +20,6 @@ logging.basicConfig(
 LEVEL_NAMES = dict(
     DEBUG   =DEBUG, 
     INFO    =INFO, 
-    WARN    =WARN, 
     WARING  =WARNING,
     ERROR   =ERROR, 
     CRITICAL=CRITICAL,
