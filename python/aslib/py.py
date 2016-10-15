@@ -31,6 +31,19 @@ def idem(obj):
     return obj
 
 
+def if_none(obj, default):
+    """
+    Returns `obj`, unless it's `None`, in which case returns `default`.
+
+      >>> if_none(42, "Hello!")
+      42
+      >>> if_none(None, "Hello!")
+      'Hello'
+
+    """
+    return default if obj is None else obj
+
+
 def is_seq(obj):
     """
     Returns true if `obj` is a non-string sequence.
@@ -41,6 +54,31 @@ def is_seq(obj):
         return False
     else:
         return not isinstance(obj, str)
+
+
+def iterize(obj):
+    """
+    Converts into or wraps in an iterator.
+
+    If `obj` is an iterable object other than a `str`, returns an iterator.
+    Otherwise, returns a one-element iterable of `obj`.
+
+      >>> list(iterize((1, 2, 3)))
+      [1, 2, 3]
+
+      >>> list(iterize("Hello!"))
+      ['Hello!']
+      >>> list(iterize(42))
+      [42]
+
+    """
+    if isinstance(obj, str):
+        return iter((obj, ))
+    else:
+        try:
+            return iter(obj)
+        except TypeError:
+            return iter((obj, ))
 
 
 def tupleize(obj):
