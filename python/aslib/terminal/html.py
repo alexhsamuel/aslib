@@ -56,6 +56,7 @@ class Converter(html.parser.HTMLParser):
         "em"    : ("", "", 0, 0, {"underline": True}),
         "i"     : ("", "", 0, 0, {"fg": "#600"}),
         "li"    : ("", "\u2219 ", 1, 1, {}),  # FIXME: Numbers for <ol>!
+        "span"  : ("", "", 0, 0, {}),  # FIXME
         "u"     : ("", "", 0, 0, {"underline": True}),
     }
 

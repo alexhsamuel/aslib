@@ -47,6 +47,17 @@ def last(iterable):
             item = next_item
 
 
+def take_last(iterable):
+    """
+    Returns the last element.
+    """
+    i = iter(iterable)
+    e = next(i)
+    for e in i:
+        pass
+    return e
+
+
 #-------------------------------------------------------------------------------
 
 # FIXME: Elsewhere

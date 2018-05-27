@@ -21,7 +21,7 @@ def _determine_size():
     """
     # Try to get the terminal size from the controlling terminal.
     try:
-        tty = open("/dev/tty")
+        tty = open(os.ctermid())
     except OSError:
         pass
     else:
