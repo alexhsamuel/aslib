@@ -31,9 +31,9 @@ def idem(obj):
     return obj
 
 
-def if_none(obj, default):
+def if_none(*objs):
     """
-    Returns `obj`, unless it's `None`, in which case returns `default`.
+    Returns the first item in `objs` that is not none.
 
       >>> if_none(42, "Hello!")
       42
@@ -41,7 +41,11 @@ def if_none(obj, default):
       'Hello'
 
     """
-    return default if obj is None else obj
+    for obj in objs:
+        if obj is not None:
+            return obj
+    else:
+        return None
 
 
 def is_seq(obj):
